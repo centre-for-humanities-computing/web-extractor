@@ -2,7 +2,7 @@ const fs = require('fs').promises;
 const CmpExtractor = require('./model/cmp-extractor');
 const path = require('path');
 const fileUtil = require('./util/file-util');
-const config = require('./model/config');
+const config = require('./config');
 
 let tempUrlsPath = 'urls-test.txt';//'urls-dk-top10k.txt'; //'urls-test.txt';
 let tempDestDir = 'd:/temp/gdpr-scrape';
@@ -21,7 +21,7 @@ config.debug = true;
 * */
 
 
-async function run() {
+async function demo() {
 
     let urlsPath = tempUrlsPath;
     let destDir = tempDestDir;
@@ -50,5 +50,5 @@ async function run() {
 
 }
 
-run();
+demo();
 
