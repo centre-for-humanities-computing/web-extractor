@@ -13,6 +13,7 @@ module.exports = {
         return res;
     },
 
-    waitFor: undefined
+    waitFor: undefined,
+    screenshotAfterWaitFor: true
 
 };

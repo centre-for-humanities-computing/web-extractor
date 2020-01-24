@@ -1,0 +1,89 @@
+const fs = require('fs').promises;
+const CmpExtractor = require('./model/cmp-extractor');
+const path = require('path');
+const fileUtil = require('./util/file-util');
+const cli = require('commander');
+const config = require('./config');
+const _ = require('lodash');
+const singleLineLog = require('single-line-log').stdout;
+
+/* Hvis den køres fra terminal, så dræb alle beskeder om:
+*
+* ERROR: The process with PID \d+ (child process of PID \d+) could not be terminated.
+*
+* brug: https://github.com/sindresorhus/filter-console
+* Lav kun hvis den køres fra konsollen
+*
+* */
+
+const optDesc = {
+    urls: `A path for file with a list of urls for extraction. Each url should be on it's own line`,
+    destination: `A path to the dir where data should be saved. If the dir already contains previous collected data the new data will be appended to the existing files`,
+    concurrency: `The maximum simultaneous loaded web pages. default: ${CmpExtractor.DEFAULT_OPTIONS.maxConcurrency}`,
+    noScreenshot: `Disable screenshots. default: ${!CmpExtractor.DEFAULT_OPTIONS.takeScreenshot}`,
+    pageTimeout: `Milliseconds to wait for the initial loading of a page. default: ${CmpExtractor.DEFAULT_OPTIONS.pageTimeoutMs}`,
+    useIdForScreenshotName: `Use an universal unique id for screenshot names instead of the url. default: ${CmpExtractor.DEFAULT_OPTIONS.useIdForScreenshotName}`
+
+}
+
+async function run() {
+
+    try {
+        cli.requiredOption('-u, --urls <file>', optDesc.urls);
+        cli.requiredOption('-d, --destination <directory>', optDesc.destination);
+        cli.option('-c, --concurrency <integer>', optDesc.concurrency, CmpExtractor.DEFAULT_OPTIONS.maxConcurrency);
+        cli.option('-n, --no-screenshot', optDesc.noScreenshot);
+        cli.option('-t, --page-timeout <integer>', optDesc.pageTimeout, CmpExtractor.DEFAULT_OPTIONS.pageTimeoutMs);
+        cli.option('-i, --use-id-for-screenshot-name', optDesc.useIdForScreenshotName, CmpExtractor.DEFAULT_OPTIONS.useIdForScreenshotName);
+
+        cli.parse(process.argv);
+
+        let urlsPath = cli.urls;
+        let destDir = cli.destination;
+        let concurrency = Math.max(1, parseIntOrThrow(cli.concurrency));
+        let takeScreenshot = cli.screenshot;
+        let pageTimeout = Math.max(1, parseIntOrThrow(cli.pageTimeout));
+        let useIdForScreenshotName = cli.useIdForScreenshotName;
+
+        let rules = await fileUtil.getCmpRules(path.join(__dirname, 'rules'));
+        let urls = await fileUtil.getUrls(urlsPath);
+
+
+        if (concurrency > 10) {
+            process.setMaxListeners(concurrency + 10); // prevent warning caused by puppeteer registering listeners for each instance
+        }
+
+        let options = {
+            takeScreenshot: takeScreenshot,
+            maxConcurrency: concurrency,
+            pageTimeoutMs: pageTimeout,
+            useIdForScreenshotName: useIdForScreenshotName
+        };
+
+        let cmpExtractor = new CmpExtractor(urls, rules, destDir, options);
+        cmpExtractor.addProgressionListener((progress) => {
+            let line = `pending: ${progress.pending}, completed: ${progress.completed}, failed: ${progress.failed}, total: ${progress.total}\n`;
+            singleLineLog(line);
+        });
+        await cmpExtractor.execute();
+
+        console.log('done');
+    } catch(e) {
+        if (config.debug) {
+            console.log(e);
+        } else {
+            console.error(e.message);
+        }
+    }
+
+}
+
+function parseIntOrThrow(str) {
+    let res = parseInt(str);
+    if (!_.isSafeInteger(res)) {
+        throw new Error(`Could not parse: ${str}`);
+    }
+    return res;
+}
+
+run();

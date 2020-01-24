@@ -1,6 +1,8 @@
 const error = require('./error');
 const _ = require('lodash');
 const path = require('path');
+const puppeteer = require('puppeteer');
+const config = require('../config');
 
 class PageAnalyzer {
 
@@ -49,13 +51,6 @@ class PageAnalyzer {
             }
 
             for (let rule of this._cmpRules) {
-                if (rule.waitFor) {
-                    await rule.waitFor(page);
-                    if (screenshot && rule.screenshotAfterWaitFor) {
-                        await page.screenshot({path: this._getScreenshotPath(screenshot.dirPath, screenshot.imageName)});
-                    }
-                }
-
                 let extractors = rule.extractor;
 
                 if (!_.isArray(extractors)) {
@@ -64,15 +59,35 @@ class PageAnalyzer {
                     ];
                 }
 
+                // add the root waitFor to the list of extractors
+                if (rule.waitFor) {
+                    extractors.unshift({
+                        waitFor: rule.waitFor
+                    });
+                }
+
                 for (let extractor of extractors) {
                     if (extractor.waitFor) {
-                        await extractor.waitFor(page);
-                        if (screenshot && rule.screenshotAfterWaitFor) {
-                            await page.screenshot({path: this._getScreenshotPath(screenshot.dirPath, screenshot.imageName)});
+                        try {
+                            await extractor.waitFor(page);
+                            if (screenshot && rule.screenshotAfterWaitFor) {
+                                await page.screenshot({path: this._getScreenshotPath(screenshot.dirPath, screenshot.imageName)});
+                            }
+                        } catch (e) {
+                            if (e instanceof puppeteer.errors.TimeoutError) {
+                                if (config.debug) {
+                                    console.error(`Timeout Error for rule in: ${rule.cmpName}, for url: ${this._url}`);
+                                }
+                                break; // go to the next rule, in outer loop
+                            }
+                            throw e;
                         }
                     }
 
-                    let cmpData = await page.evaluate(extractor.extractor, result.data);
+                    let cmpData = null;
+                    if (extractor.extractor) {
+                        cmpData = await page.evaluate(extractor.extractor, result.data);
+                    }
 
                     if (cmpData && !_.isEmpty(cmpData)) {
                         result.data = cmpData;
@@ -101,7 +116,7 @@ class PageAnalyzer {
     }
 
     _getScreenshotPath(dirParh, imageName) {
-        let imageFullName = this._screenshotCounter > 1 ? `${imageName}_${this._screenshotCounter}.png` : `${imageName}.png`;
+        let imageFullName = `${imageName}_${this._screenshotCounter}.png`;
         this._screenshotCounter++;
         return path.join(dirParh, imageFullName);
     }

@@ -1,5 +1,6 @@
 const fs = require('fs').promises;
 const path = require('path');
+const config = require('../config');
 
 module.exports.getUrls = async function(file) {
     let content = await fs.readFile(file, 'utf8');
@@ -20,6 +21,9 @@ module.exports.getCmpRules = async function(dir) {
             let rule = require(path.join(dir, filename));
             rules.push(rule);
         }
+    }
+    if (config.debug && filenames.length !== rules.length) {
+        console.log(`Ignored ${filenames.length - rules.length} rule file(s), due to double leading underscore`);
     }
     return rules;
 };

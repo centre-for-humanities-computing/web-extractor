@@ -5,21 +5,10 @@ const fileUtil = require('./util/file-util');
 const config = require('./config');
 
 let tempUrlsPath = 'urls-test.txt';//'urls-dk-top10k.txt'; //'urls-test.txt';
-let tempDestDir = 'd:/temp/gdpr-scrape';
+let tempDestDir = 'D:\\temp\\gdpr-scrape\\cmp-data-2020-01-24T12_36_24'; //'d:/temp/gdpr-scrape';
 let tempMaxConcurrency = 25;
 
 config.debug = true;
-
-
-/* Hvis den køres fra terminal, så dræb alle beskeder om:
-*
-* ERROR: The process with PID \d+ (child process of PID \d+) could not be terminated.
-*
-* brug: https://github.com/sindresorhus/filter-console
-* Lav kun hvis den køres fra konsollen
-*
-* */
-
 
 async function demo() {
 

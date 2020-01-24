@@ -1,15 +1,16 @@
 
 hardening: https://docs.browserless.io/blog/2019/03/13/more-observations.html
-- it looks likes the current version of puppeteer does an ok job of killing the processes.
-
 
 Features:
 - make i possible to inject a script tools file, which can be reused accros cmp-rules.
-- The rule should optionally have toolScript property. If set, inject the file
+  The rule should optionally have toolScript property. If set, inject the file
 
-HAR DISABLED Incognito. Er det et problem at vi har cookies?
-Incocnito lavet mange zombier? Tjek om der er nogen der skriver om det?
-Det er ikke nok at slette den enkelte cookie i standard, da vi kører tingene i parallel, så
-to samtidige pages, kan læse hinadens cookies
+- If screenshot is not enabled an none of the rules requires images loaded, make it possible
+  to disable image loading:  https://www.scrapehero.com/how-to-increase-web-scraping-speed-using-puppeteer/
+  For each base-rule make a property imagesRequired: default true. If none of the rules requires images and
+  screenshot i disabled, don't load the images
 
-Lav så den default navngiver billeder efter slug af url (filename url). Lav flag til at det benytter id.
+- maybe set another user-agent, which at least hasn't got "Headless" in the name
+
+- Partitioning of screenshot dir. Only if necessary. Write down algorithm .... (pending).
+  Will only work if id's are used instead of url-filenames.

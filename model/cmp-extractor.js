@@ -5,18 +5,24 @@ const filenamifyUrl = require('filenamify-url');
 const EventEmitter = require('events').EventEmitter;
 const _ = require('lodash');
 const fs = require('fs').promises;
+const fsStandard = require('fs');
 const path = require('path');
 const errors = require('./error');
 const puppeteer = require('puppeteer');
 const fkill = require('fkill');
-const config = require('./config');
+const config = require('../config');
 
 const DEFAULT_OPTIONS = Object.freeze({
-    takeScreenshot: false,
+    takeScreenshot: true,
     useIdForScreenshotName: false,
     maxConcurrency: 25,
-    createNewDirForEachRun: true,
     pageTimeoutMs: 60000
+});
+
+const FILE_NAMES = Object.freeze({
+    cmpData: 'cmp-data.json',
+    cmpNotFoundUrls: 'cmp-not-found-urls.txt',
+    errors: 'errors.json'
 });
 
 class CmpExtractor {
@@ -25,8 +31,12 @@ class CmpExtractor {
         options = _.defaults(options, DEFAULT_OPTIONS);
         this._urls = urls;
         this._cmpRules = cmpRules;
-        let dataDirName = 'cmp-data-' + (options.createNewDirForEachRun ? getDateTimeDirString() : '');
-        this._destDir = path.join(destDir, dataDirName);
+        if (this._isExistingCmpDataDir(destDir)) {
+            this._destDir = destDir;
+        } else {
+            let dataDirName = `cmp-data-${getDateTimeDirString()}`;
+            this._destDir = path.join(destDir, dataDirName);
+        }
         this._takeScreenshot = options.takeScreenshot;
         this._useIdForScreenshotName = options.useIdForScreenshotName;
         this._maxConcurrency = options.maxConcurrency;
@@ -52,9 +62,9 @@ class CmpExtractor {
         }
 
         // open files
-        this._cmpDataFile = await fs.open(path.join(this._destDir, 'cmp-data.json'), 'a');
-        this._cmpNotFoundUrlFile = await fs.open(path.join(this._destDir, 'cmp-not-found-urls.txt'), 'a');
-        this._errorLogFile = await fs.open(path.join(this._destDir, 'errors.json'), 'a');
+        this._cmpDataFile = await fs.open(path.join(this._destDir, FILE_NAMES.cmpData), 'a');
+        this._cmpNotFoundUrlFile = await fs.open(path.join(this._destDir, FILE_NAMES.cmpNotFoundUrls), 'a');
+        this._errorLogFile = await fs.open(path.join(this._destDir, FILE_NAMES.errors), 'a');
 
         this._emitProgression();
 
@@ -67,7 +77,7 @@ class CmpExtractor {
                 await this._queue.onEmpty();
             }
 
-            if (i === 200) {
+            if (i % (this._maxConcurrency * 20) === 0) {
                 await this._queue.onIdle();
                 await this._reloadBrowser(); // prevent to large memory leaks from Chromium
             }
@@ -179,6 +189,10 @@ class CmpExtractor {
         return this._browser;
     }
 
+    _isExistingCmpDataDir(dirPath) {
+        return fsStandard.existsSync(dirPath) && fsStandard.existsSync(path.join(dirPath, FILE_NAMES.cmpData));
+    }
+
 }
 
 function getDateTimeDirString() {
@@ -191,5 +205,6 @@ function padDatePart(part) {
     return `${part}`.padStart(2, '0');
 }
 
+CmpExtractor.DEFAULT_OPTIONS = DEFAULT_OPTIONS;
 
 module.exports = CmpExtractor;
