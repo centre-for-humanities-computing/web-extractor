@@ -1,0 +1,21 @@
+{
+  "name": "gdpr-analyzer",
+  "version": "0.1.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "filenamify-url": "^2.1.1",
+    "fkill": "^6.2.0",
+    "lodash": "^4.17.15",
+    "p-queue": "^6.2.1",
+    "puppeteer": "^2.0.0",
+    "single-line-log": "^1.1.2",
+    "uniqid": "^5.2.0"
+  }
+}

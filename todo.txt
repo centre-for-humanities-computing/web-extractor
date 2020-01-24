@@ -1,0 +1,15 @@
+
+hardening: https://docs.browserless.io/blog/2019/03/13/more-observations.html
+- it looks likes the current version of puppeteer does an ok job of killing the processes.
+
+
+Features:
+- make i possible to inject a script tools file, which can be reused accros cmp-rules.
+- The rule should optionally have toolScript property. If set, inject the file
+
+HAR DISABLED Incognito. Er det et problem at vi har cookies?
+Incocnito lavet mange zombier? Tjek om der er nogen der skriver om det?
+Det er ikke nok at slette den enkelte cookie i standard, da vi kører tingene i parallel, så
+to samtidige pages, kan læse hinadens cookies
+
+Lav så den default navngiver billeder efter slug af url (filename url). Lav flag til at det benytter id.
