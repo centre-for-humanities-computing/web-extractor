@@ -7,24 +7,16 @@ const config = require('./config');
 const _ = require('lodash');
 const singleLineLog = require('single-line-log').stdout;
 
-/* Hvis den køres fra terminal, så dræb alle beskeder om:
-*
-* ERROR: The process with PID \d+ (child process of PID \d+) could not be terminated.
-*
-* brug: https://github.com/sindresorhus/filter-console
-* Lav kun hvis den køres fra konsollen
-*
-* */
-
 const optDesc = {
     urls: `A path for file with a list of urls for extraction. Each url should be on it's own line`,
     destination: `A path to the dir where data should be saved. If the dir already contains previous collected data the new data will be appended to the existing files`,
     concurrency: `The maximum simultaneous loaded web pages. default: ${CmpExtractor.DEFAULT_OPTIONS.maxConcurrency}`,
     noScreenshot: `Disable screenshots. default: ${!CmpExtractor.DEFAULT_OPTIONS.takeScreenshot}`,
     pageTimeout: `Milliseconds to wait for the initial loading of a page. default: ${CmpExtractor.DEFAULT_OPTIONS.pageTimeoutMs}`,
-    useIdForScreenshotName: `Use an universal unique id for screenshot names instead of the url. default: ${CmpExtractor.DEFAULT_OPTIONS.useIdForScreenshotName}`
+    useIdForScreenshotName: `Use an universal unique id for screenshot names instead of the url. default: ${CmpExtractor.DEFAULT_OPTIONS.useIdForScreenshotName}`,
+    debug: 'Print more detailed error information'
 
-}
+};
 
 async function run() {
 
@@ -35,6 +27,7 @@ async function run() {
         cli.option('-n, --no-screenshot', optDesc.noScreenshot);
         cli.option('-t, --page-timeout <integer>', optDesc.pageTimeout, CmpExtractor.DEFAULT_OPTIONS.pageTimeoutMs);
         cli.option('-i, --use-id-for-screenshot-name', optDesc.useIdForScreenshotName, CmpExtractor.DEFAULT_OPTIONS.useIdForScreenshotName);
+        cli.option('-x, --debug', CmpExtractor.DEFAULT_OPTIONS.useIdForScreenshotName);
 
         cli.parse(process.argv);
 
@@ -44,10 +37,12 @@ async function run() {
         let takeScreenshot = cli.screenshot;
         let pageTimeout = Math.max(1, parseIntOrThrow(cli.pageTimeout));
         let useIdForScreenshotName = cli.useIdForScreenshotName;
+        let debug = cli.debug;
+
+        config.debug = debug;
 
         let rules = await fileUtil.getCmpRules(path.join(__dirname, 'rules'));
         let urls = await fileUtil.getUrls(urlsPath);
-
 
         if (concurrency > 10) {
             process.setMaxListeners(concurrency + 10); // prevent warning caused by puppeteer registering listeners for each instance

@@ -1,6 +1,3 @@
-
-
-
 class HttpError extends Error {
 
     constructor(statusCode, ...params) {

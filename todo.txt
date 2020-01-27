@@ -12,5 +12,21 @@ Features:
 
 - maybe set another user-agent, which at least hasn't got "Headless" in the name
 
-- Partitioning of screenshot dir. Only if necessary. Write down algorithm .... (pending).
-  Will only work if id's are used instead of url-filenames.
+- Partitioning of screenshot dir. Only if necessary.
+  - Will only work if id's are used instead of url-filenames.
+  - Use each letter in the id-alphabet as name for a folder (36 letters).
+  - calculate the depth e.g.
+    calculateDirPartitionDepth(maxFilesPrDir, totalFiles, alphabetSize) {
+      let capacity = maxFilePrDir;
+      let partitionDepth = 0;
+      while (capacity < totalFiles) {
+         capacity *= alphabetSize;
+        partitionDepth++;
+      }
+
+      return partitionDepth;
+    }
+  - Create the dirs as needed.
+  - Make a config.json which saves the partitionDepth in the project path, so we
+    can use this for resumes (passing in a folder with existing data)
+

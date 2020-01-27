@@ -86,16 +86,15 @@ class CmpExtractor {
         await this._queue.onIdle();
 
         //close files
-        for (let fileDs of [this._cmpDataFile, this._cmpNotFoundUrlFile, this._errorLogFile]) {
+        for (let file of [this._cmpDataFile, this._cmpNotFoundUrlFile, this._errorLogFile]) {
             try {
-                await fileDs.close();
+                await file.close();
             } catch (e) {
                 console.error('Could not close file: ', e);
             }
         }
 
         await this._close();
-
     }
 
     async _reloadBrowser() {
@@ -169,7 +168,7 @@ class CmpExtractor {
                 error.stack = e.stack;
             }
             let json = JSON.stringify(error) + '\n';
-            await this._errorLogFile.appendFile(json);
+            await this._errorLogFile.appendFile(json, 'utf8');
         } finally {
             this._progression.pending--;
             this._emitProgression();
