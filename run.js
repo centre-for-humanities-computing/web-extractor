@@ -55,6 +55,8 @@ async function run() {
             useIdForScreenshotName: useIdForScreenshotName
         };
 
+        let start = Date.now();
+
         let cmpExtractor = new CmpExtractor(urls, rules, destDir, options);
         cmpExtractor.addProgressionListener((progress) => {
             let line = `pending: ${progress.pending}, completed: ${progress.completed}, failed: ${progress.failed}, total: ${progress.total}\n`;
@@ -62,7 +64,7 @@ async function run() {
         });
         await cmpExtractor.execute();
 
-        console.log('done');
+        console.log(`done... (elapsed: ${elapsedTime(start)})`);
     } catch(e) {
         if (config.debug) {
             console.log(e);
@@ -79,6 +81,18 @@ function parseIntOrThrow(str) {
         throw new Error(`Could not parse: ${str}`);
     }
     return res;
+}
+
+function elapsedTime(startTime) {
+    let elapsed = Date.now() - startTime;
+    let secMs = 1000;
+    let minMs = 60 * secMs;
+    let hoursMs = 60 * minMs;
+
+    let hours = Math.floor(elapsed / hoursMs);
+    let minutes = Math.floor((elapsed - hours * hoursMs) / minMs);
+    let secs = Math.floor((elapsed - (hoursMs * hours + minutes * minMs)) / secMs);
+    return `${hours}h, ${minutes}m, ${secs}s`;
 }
 
 run();
