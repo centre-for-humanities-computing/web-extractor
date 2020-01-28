@@ -24,13 +24,13 @@ $ node run -h
 ```
 
 ### CLI options
-- `-u, --urls <file>` [required] - A path for file with a list of urls for extraction. Each url should be on it's own line
-- `-d, --destination <directory>` [required] - A path to the dir where data should be saved. If the dir already contains previous collected data the new data will be appended to the existing files
-- `-c, --concurrency <integer>` [optional, default=25] - The maximum simultaneous loaded web pages
-- `-n, --no-screenshot` [optional] - Disable screenshots
-- `-t, --page-timeout <integer>` [optional, default=60000] - Milliseconds to wait for the initial loading of a page
-- `-i, --use-id-for-screenshot-name` [optional] - Use an universal unique id for screenshot names instead of the url
-- `-x, --debug` [optional] - Print more detailed error information
+- **`-u, --urls <file>`** [required] - A path for file with a list of urls for extraction. Each url should be on it's own line
+- **`-d, --destination <directory>`** [required] - A path to the dir where data should be saved. If the dir already contains previous collected data the new data will be appended to the existing files
+- **`-c, --concurrency <integer>`** [optional, default=25] - The maximum simultaneous loaded web pages
+- **`-n, --no-screenshot`** [optional] - Disable screenshots
+- **`-t, --page-timeout <integer>`** [optional, default=60000] - Milliseconds to wait for the initial loading of a page
+- **`-i, --use-id-for-screenshot-name`** [optional] - Use an universal unique id for screenshot names instead of the url
+- **`-x, --debug`** [optional] - Print more detailed error information
 
 ### Full Example
 ```

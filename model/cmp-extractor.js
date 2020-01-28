@@ -133,7 +133,7 @@ class CmpExtractor {
             let browser = await this._browserInstance();
             let res = await analyzer.extractCmpData(browser, screenshotInfo);
 
-            if (!res.data || _.isEmpty(res.data)) {
+            if (!PageAnalyzer.isRuleMatch(res.data)) {
                 await this._cmpNotFoundUrlFile.appendFile(url + '\n', 'utf8');
             } else {
                 let entry = {

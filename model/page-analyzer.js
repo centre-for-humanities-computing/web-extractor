@@ -51,7 +51,7 @@ class PageAnalyzer {
             }
 
             for (let rule of this._cmpRules) {
-                let extractors = rule.extractor;
+                let extractors = _.clone(rule.extractor); // clone because we modify below
 
                 if (!_.isArray(extractors)) {
                     extractors = [
@@ -66,6 +66,8 @@ class PageAnalyzer {
                     });
                 }
 
+                let cmpData = null;
+
                 for (let extractor of extractors) {
                     if (extractor.waitFor) {
                         try {
@@ -79,23 +81,20 @@ class PageAnalyzer {
                                     console.error(`Timeout Error for rule in: ${rule.cmpName}, for url: ${this._url}`);
                                 }
                                 break; // go to the next rule, in outer loop
+                            } else {
+                                throw e;
                             }
-                            throw e;
                         }
                     }
 
-                    let cmpData = null;
                     if (extractor.extractor) {
-                        cmpData = await page.evaluate(extractor.extractor, result.data);
-                    }
-
-                    if (cmpData && !_.isEmpty(cmpData)) {
-                        result.data = cmpData;
+                        cmpData = await page.evaluate(extractor.extractor, cmpData);
                     }
                 }
 
-                if (result.data) {
+                if (PageAnalyzer.isRuleMatch(cmpData)) {
                     result.cmpName = rule.cmpName;
+                    result.data = cmpData;
                     break;
                 }
             }
@@ -119,6 +118,15 @@ class PageAnalyzer {
         let imageFullName = `${imageName}_${this._screenshotCounter}.png`;
         this._screenshotCounter++;
         return path.join(dirParh, imageFullName);
+    }
+
+    /**
+     * Test if the value lives up to the requirements for being a match
+     * @param value
+     * @returns {boolean} false if value is one of <code>null, undefined, [], {}</code> true otherwise
+     */
+    static isRuleMatch(value) {
+        return !_.isNil(value) && (!_.isObjectLike(value) || !_.isEmpty(value));
     }
 
 }
