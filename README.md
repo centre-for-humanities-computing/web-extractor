@@ -57,13 +57,13 @@ self contained json-object, which makes it easy to parse large files line by lin
 
 **screenshots** contains one or more screenshots for each url where a rule matched.
 
-#### Resuming a Previous Extraction
+### Resuming a Previous Extraction
 If a path to a directory containing previous extracted data is passed in Cmp-extractor will
 add to the existing files and screenshot directory instead of creating a new directory. 
 
 
 ## Extraction Rules
-The extraction rules can found in the `rules` directory of the project. Each rule is a node module with the following
+The extraction rules can found in the `rules` directory of the project. Each rule is a node.js module with the following
 structure:
 
 ```
@@ -77,11 +77,15 @@ module.exports = {
     extractor: function() {} // optional
 };
 ```
+##### cmpName
+Type: `string`
+
+The name of the CMP or some other name identifying the extracted data
 
 ##### waitFor
 
 Type: `async function`\
-Parameter: `page` an instance of a [puppeteer page](https://github.com/puppeteer/puppeteer/blob/v2.1.0/docs/api.md#class-page)
+Parameter: `page` - an instance of a [puppeteer page](https://github.com/puppeteer/puppeteer/blob/v2.1.0/docs/api.md#class-page)
 
 The extraction engine will wait for this method to complete before running the `extractor` function(s).
 
@@ -96,15 +100,15 @@ waitFor: async function(page) {
 ##### screenshotAfterWaitFor
 Type: `boolean`
 
-Should a screenshot be taken aften each waitFor? 
+Should a screenshot be taken after each waitFor? 
 
 ##### extractor
 Type: `function | array`\
 Returns: the extraction result or `null, undefined, [], {}` if no result was found
 
-The extractor function is executed in the context of the document so you have access to `document`, `window` etc.
+The extractor function is executed in the context of the page so you have access to `document`, `window` etc.
 
-To extract all paragraph text from a document you can do: 
+To extract all paragraph text from a page you can do: 
 
 ```
 extractor: function() {
@@ -121,9 +125,10 @@ extractor: function() {
 
 Sometimes it is required to click buttons, wait for events to happen etc. to complete an extraction. The extractor can
 then be divided into multiple sections by providing an array of objects with one or both of `waitFor` and `extractor`. 
-Each extractor will get passed the return value from the following extractor so you can add to a combined result.
+Each extractor will get passed the return value from the previous extractor so you can add to this to get a combined result.
 
-To wait for element to appear, extract the text, and click next and extract the text you could do:
+To wait for an element to appear, extract some text, 
+click next and extract some more text you could do:
 
 ```
 extractor: [
@@ -132,10 +137,10 @@ extractor: [
             await page.waitFor('.popup');
         },
         extractor: function() {
-            let result = {
+            let data = {
                 popupPage1: document.querySelector('.popup-text').textContent;
             }
-            return result;
+            return data;
         }
     }, {
         waitFor: async function(page) {
@@ -155,8 +160,8 @@ All this could also have been done in the extractor alone using the DOM and muta
 an easier way to do it. 
  
 
-## Disable og Remove Rules
+## Disable or Remove Rules
 A rule can be temporarily disabled by prefixing the file name with double underscore e.g. `__cookiebot.js`. To completely
-remove a rule simply delete de file.
+remove a rule simply delete the file.
 
 
