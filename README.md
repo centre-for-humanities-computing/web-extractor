@@ -20,7 +20,7 @@ $ npm install
 ## Usage
 - Navigate to the root of the repository and run 
 ```
-$ node run -h 
+$ node extract -h 
 ```
 
 ### CLI options
@@ -34,9 +34,9 @@ $ node run -h
 
 ### Full Example
 ```
-$ -u /data/urls.txt-d /data/cmp-crawls -c 35 -t 90000
+$ node extract -u /data/urls.txt-d /data/cmp-crawls -c 35 -t 90000
 ```
-*Analyze each url in '/data/urls.txt' and save the results '/data/cmp-crawls'. 
+*Analyze each url in '/data/urls.txt' and save the results in '/data/cmp-crawls'. 
 Load a maximum of 35 simultaneous web pages and wait a maximum of 90000ms for each page to load.*
 
 ### Results
@@ -62,9 +62,101 @@ If a path to a directory containing previous extracted data is passed in Cmp-ext
 add to the existing files and and screenshot directory instead of creating a new directory. 
 
 
-# TODO
-Lav dokumentation færdig.
+## Extraction Rules
+The extraction rules can found in `rules` directory of the project. Each rule is a node module with the following
+structure:
 
-Beskriv hvordan man nye regler og fjerner eller disabler regler.
+```
+module.exports = {
+    cmpName: 'name of cmp', //required
+
+    waitFor: async function(page) {}, // optional
+
+    screenshotAfterWaitFor: false, // optional
+
+    extractor: function() {} // optional
+};
+```
+
+##### waitFor
+
+Type: `async function`\
+Parameter: `page` an instance of a [puppeteer page](https://github.com/puppeteer/puppeteer/blob/v2.1.0/docs/api.md#class-page)
+
+The extraction engine will wait for this method to complete before running the `extractor` function(s).
+
+To wait for a given DOM-element to become present you can do:
+
+```
+waitFor: async function(page) {
+    await page.waitFor('#my-element' {timeout: 5000});
+}
+```
+
+##### screenshotAfterWaitFor
+Type: `boolean`
+
+Should a screenshot be taken aften each waitFor? 
+
+##### extractor
+Type: `function | array`\
+Returns: the extraction result or `null, undefined, [], {}` if no result was found
+
+The extractor function is executed in the context of the document so you have access to `document`, `window` etc.
+
+To extract all paragraph text from a document you can do: 
+
+```
+extractor: function() {
+    let results = [];
+    let paragraphs = document.querySelector('p');
+    if (p) {
+        for (let p of paragraphs) {
+            results.push(p.textContent);
+        }
+    }
+    return results;
+}
+```
+
+Sometimes it is required to click buttons, wait for events to happen etc. to complete an extraction. The extractor can
+then be divided into multiple sections by providing an array of objects with one or both of `waitFor` and `extractor`. 
+Each extractor will get passed the return value from the following extractor so you can add to a combined result.
+
+To wait for element to appear, extract the text, and click next and extract the text you could do:
+
+```
+extractor: [
+    {
+        waitFor: async function(page) {
+            await page.waitFor('.popup');
+        },
+        extractor: function() {
+            let result = {
+                popupPage1: document.querySelector('.popup-text').textContent;
+            }
+            return result;
+        }
+    }, {
+        waitFor: async function(page) {
+            await page.click('.popup .next-button');
+            await page.waitFor('.popup .page2');
+        },
+        extractor: function(data) { // data is the object returned in the extractor above
+            data['popupPage2'] = document.querySelector('.popup-text').textContent;
+            return data;
+        }
+    }
+
+]
+```
+
+All this could also have been done in the extractor alone using the DOM and mutation-observers etc. so the above is only
+an easier way to do it. 
+ 
+
+## Disable og Remove Rules
+A rule can be temporarily disabled by prefixing the file name with double underscore e.g. `__cookiebot.js`. To completely
+remove a rule simply delete de file.
 
 
