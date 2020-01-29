@@ -3,7 +3,7 @@ A tool for extracting Consent Management Provider data.
 
 Provided a list of urls and a set of extraction rules Cmp-extractor loads each url 
 and test each rule against the web page until a rule succeeds or there are no more rules. If a rule 
-succeeds the data described in the rules extract method is exported.
+succeeds the data described in the rule's extract method is exported.
 
 A set of rules for common CMP's is included as default, 
 but additionally rules can be added and the existing ones can be disabled. 
@@ -24,7 +24,7 @@ $ node extract -h
 ```
 
 ### CLI options
-- **`-u, --urls <file>`** [required] - A path for file with a list of urls for extraction. Each url should be on it's own line
+- **`-u, --urls <file>`** [required] - A path for a file with a list of urls for extraction. Each url in the file should be on it's own line
 - **`-d, --destination <directory>`** [required] - A path to the dir where data should be saved. If the dir already contains previous collected data the new data will be appended to the existing files
 - **`-c, --concurrency <integer>`** [optional, default=25] - The maximum simultaneous loaded web pages
 - **`-n, --no-screenshot`** [optional] - Disable screenshots
