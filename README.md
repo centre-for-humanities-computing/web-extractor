@@ -17,6 +17,7 @@ but additionally rules can be added and the existing ones can be disabled.
 $ npm install
 ```
 
+
 ## Usage
 - Navigate to the root of the repository and run 
 ```
@@ -24,7 +25,7 @@ $ node extract -h
 ```
 
 ### CLI options
-- **`-u, --urls <file>`** [required] - A path for a file with a list of urls for extraction. Each url in the file should be on it's own line
+- **`-u, --urls <file>`** [required] - A path to a file with a list of urls for extraction. Each url in the file should be on it's own line
 - **`-d, --destination <directory>`** [required] - A path to the dir where data should be saved. If the dir already contains previous collected data the new data will be appended to the existing files
 - **`-c, --concurrency <integer>`** [optional, default=25] - The maximum simultaneous loaded pages
 - **`-n, --no-screenshot`** [optional] - Disable screenshots
@@ -63,7 +64,16 @@ add to the existing files and screenshot directory instead of creating a new dir
 
 
 ## Extraction Rules
-The extraction rules can found in the `rules` directory of the project. Each rule is a node.js module with the following
+The extraction rules can be found in the `rules` directory of the project. 
+Each rule is tested one by one in alphabetical order until a match is found. 
+In the event of a match the result is saved and any remaining rules are aborted.
+
+### Disabling and Deleting Rules
+A rule can be temporarily disabled by prefixing the file name with double underscore e.g. `__cookiebot.js`. To completely
+remove a rule simply delete the file.
+
+### Creating Rules
+Each rule is a node.js module with the following
 structure:
 
 ```
@@ -100,11 +110,11 @@ waitFor: async function(page) {
 ##### screenshotAfterWaitFor
 Type: `boolean`
 
-Should a screenshot be taken after each waitFor? 
+Should a screenshot after each waitFor? If `false` only the initial screenshot after page load will be saved.  
 
 ##### extractor
-Type: `function | array`\
-Returns: the extraction result or `null, undefined, [], {}` if no result was found
+Type: `function` | `array`\
+Returns: the extraction result or one of: `null`, `undefined`, `[]` or `{}` if no result was found.
 
 The extractor function is executed in the context of the page so you have access to `document`, `window` etc.
 
@@ -156,12 +166,8 @@ extractor: [
 ]
 ```
 
-All this could also have been done in the extractor alone using the DOM and mutation-observers etc. so the above is only
-an easier way to do it. 
+All this could also have been done in the extractor alone using the DOM, events and mutation-observers etc., 
+so the above is only an easier way to do it. 
  
-
-## Disable or Remove Rules
-A rule can be temporarily disabled by prefixing the file name with double underscore e.g. `__cookiebot.js`. To completely
-remove a rule simply delete the file.
 
 

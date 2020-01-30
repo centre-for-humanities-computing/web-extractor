@@ -8,7 +8,7 @@ const _ = require('lodash');
 const singleLineLog = require('single-line-log').stdout;
 
 const optDesc = {
-    urls: `A path for file with a list of urls for extraction. Each url should be on it's own line`,
+    urls: `A path to a file with a list of urls for extraction. Each url should be on it's own line`,
     destination: `A path to the dir where data should be saved. If the dir already contains previous collected data the new data will be appended to the existing files`,
     concurrency: `The maximum simultaneous loaded web pages. default: ${CmpExtractor.DEFAULT_OPTIONS.maxConcurrency}`,
     noScreenshot: `Disable screenshots. default: ${!CmpExtractor.DEFAULT_OPTIONS.takeScreenshot}`,

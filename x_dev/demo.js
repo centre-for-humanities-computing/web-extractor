@@ -1,8 +1,8 @@
 const fs = require('fs').promises;
-const CmpExtractor = require('./model/cmp-extractor');
+const CmpExtractor = require('../model/cmp-extractor');
 const path = require('path');
-const fileUtil = require('./util/file-util');
-const config = require('./config');
+const fileUtil = require('../util/file-util');
+const config = require('../config');
 
 let urlsPath = 'urls-test.txt';
 let destDir = 'd:/temp/gdpr-scrape';
