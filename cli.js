@@ -27,7 +27,7 @@ async function run() {
         cli.option('-n, --no-screenshot', optDesc.noScreenshot);
         cli.option('-t, --page-timeout <integer>', optDesc.pageTimeout, CmpExtractor.DEFAULT_OPTIONS.pageTimeoutMs);
         cli.option('-i, --use-id-for-screenshot-name', optDesc.useIdForScreenshotName, CmpExtractor.DEFAULT_OPTIONS.useIdForScreenshotName);
-        cli.option('-x, --debug', CmpExtractor.DEFAULT_OPTIONS.useIdForScreenshotName);
+        cli.option('-x, --debug', false);
 
         cli.parse(process.argv);
 

@@ -97,26 +97,6 @@ class CmpExtractor {
         await this._close();
     }
 
-    async _reloadBrowser() {
-        await this._close();
-        await this._browserInstance();
-    }
-
-    async _close() {
-        if (!this._browser) {
-            return;
-        }
-
-        let browser = await this._browserInstance();
-        let pid = browser.process().pid;
-        await browser.close();
-        await fkill(pid, {
-            force: true,
-            tree: true,
-            silent: true
-        });
-    }
-
     async _runAnalysis(url) {
         try {
             let analyzer = new PageAnalyzer(url, this._cmpRules, this._pageTimeout);
@@ -177,6 +157,26 @@ class CmpExtractor {
 
     _emitProgression() {
         this._eventEmitter.emit('progression', _.clone(this._progression));
+    }
+
+    async _reloadBrowser() {
+        await this._close();
+        await this._browserInstance();
+    }
+
+    async _close() {
+        if (!this._browser) {
+            return;
+        }
+
+        let browser = await this._browserInstance();
+        let pid = browser.process().pid;
+        await browser.close();
+        await fkill(pid, {
+            force: true,
+            tree: true,
+            silent: true
+        });
     }
 
     async _browserInstance() {
