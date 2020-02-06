@@ -10,10 +10,10 @@ const singleLineLog = require('single-line-log').stdout;
 const optDesc = {
     urls: `A path to a file with a list of urls for extraction. Each url should be on it's own line`,
     destination: `A path to the dir where data should be saved. If the dir already contains previous collected data the new data will be appended to the existing files`,
-    concurrency: `The maximum simultaneous loaded web pages. default: ${CmpExtractor.DEFAULT_OPTIONS.maxConcurrency}`,
-    noScreenshot: `Disable screenshots. default: ${!CmpExtractor.DEFAULT_OPTIONS.takeScreenshot}`,
-    pageTimeout: `Milliseconds to wait for the initial loading of a page. default: ${CmpExtractor.DEFAULT_OPTIONS.pageTimeoutMs}`,
-    useIdForScreenshotName: `Use an universal unique id for screenshot names instead of the url. default: ${CmpExtractor.DEFAULT_OPTIONS.useIdForScreenshotName}`,
+    concurrency: `The maximum simultaneous loaded web pages`,
+    noScreenshot: `Disable screenshots`,
+    pageTimeout: `Milliseconds to wait for the initial loading of a page`,
+    useIdForScreenshotName: `Use an universal unique id for screenshot names instead of the url`,
     debug: 'Print more detailed error information'
 
 };
