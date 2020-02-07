@@ -137,6 +137,7 @@ class CmpExtractor {
                 console.error(e);
             }
             let error = {
+                timestamp: (new Date()).toISOString(),
                 url: url
             };
             if (e instanceof errors.HttpError) {
