@@ -1,0 +1,7 @@
+# test web pages
+dr.dk
+tv2.dk
+alt.dk
+boersen.dk
+billetlugen.dk
+bilbasen.dk
