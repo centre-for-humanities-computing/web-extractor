@@ -1,5 +1,22 @@
+const template = {
+    html: null,
+    descriptionPresent: false,
+    preselectedValues: true
+};
+
 module.exports = {
     cmpName: 'test', //required
+
+    /**
+     * Return an object which will be passed in to the first extractor function. The template will be cloned
+     * for every time it is passed to the first extractor function for each url, to prevent the original template being modified.
+     * The returned object must be JSON serializable.
+     * @returns {object}
+     */
+    dataTemplate: function() { // optional
+        /* EXAMPLE */
+        return template;
+    },
 
 
     /**
@@ -26,9 +43,9 @@ module.exports = {
      * If info for the given CMP was found return an object with all the data which should be saved
      * if the given CMP was not found return and empty object or something which evaluates to false
      *
-     * If multiple extractions separated by waitFor is required an aray of objects with and extractor
+     * If multiple extractions separated by waitFor is required an array of objects with and extractor
      * and a waitFor can be returned. Each extractor will get passed the return value from the previous
-     * extractor so it is possible keep appending to the same object.
+     * extractor so it is possible keep appending to the same object. See also {@link #dataTemplate}
      *
      * If a
      * *** Example ***
@@ -54,15 +71,18 @@ module.exports = {
      *    }
      * ]
      *
-     *
+     * @see #dataTemplate
      * @returns {object}
      */
-    extractor: function() { // optional
+    extractor: function(template) { // optional
         /* EXAMPLE */
         let cmpDesc = document.querySelector('#cmp-desc').textContent;
         let res = {};
         if (cmpDesc.match(/Cmp TEST/)) {
+            res = template;
             res.descriptions = [];
+            res.html = document.innerHTML;
+            res.preselectedValues = false;
             for (let cookieDesc of document.querySelectorAll('.jppol-cmp-purpose-description')) {
                 res.descriptions.push(cookieDesc.textContent);
             }

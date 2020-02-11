@@ -52,6 +52,11 @@ class PageAnalyzer {
             }
 
             for (let rule of this._cmpRules) {
+                let dataTemplate = (rule.dataTemplate ? rule.dataTemplate() : null);
+                if (dataTemplate) {
+                    dataTemplate = _.cloneDeep(dataTemplate); //user can make changes to template, so make sure to make a new copy for every run
+                }
+
                 let extractors = _.clone(rule.extractor); // clone because we modify below
 
                 if (!_.isArray(extractors)) {
@@ -67,7 +72,7 @@ class PageAnalyzer {
                     });
                 }
 
-                let cmpData = null;
+                let cmpData = dataTemplate;
 
                 for (let extractor of extractors) {
                     if (extractor.waitFor) {

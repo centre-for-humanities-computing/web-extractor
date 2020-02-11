@@ -1,8 +1,10 @@
+const template = require('./__cmp-data-template');
+
 module.exports = {
 
     cmpName: 'cookieinformation',
 
-    extractor: function() {
+    extractor: function(template) {
         let res = {};
 
         let selectors = ['#coiConsentBanner', '#coi-cookie', '#coi-banner-wrapper'];
@@ -18,6 +20,10 @@ module.exports = {
     },
 
     waitFor: undefined,
-    screenshotAfterWaitFor: true
+    screenshotAfterWaitFor: true,
+
+    dataTemplate: function() {
+        return template;
+    }
 
 };

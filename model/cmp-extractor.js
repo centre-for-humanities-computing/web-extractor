@@ -117,6 +117,7 @@ class CmpExtractor {
                 await this._cmpNotFoundUrlFile.appendFile(url + '\n', 'utf8');
             } else {
                 let entry = {
+                    time: (new Date()).toISOString(),
                     url: url,
                     cmpName: res.cmpName,
                     data: res.data

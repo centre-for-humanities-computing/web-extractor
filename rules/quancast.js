@@ -1,8 +1,10 @@
+const template = require('./__cmp-data-template');
+
 module.exports = {
 
     cmpName: 'Quancast',
 
-    extractor: function() {
+    extractor: function(template) {
         let res = {};
 
         let element = document.querySelector('#qcCmpUi');
@@ -14,6 +16,10 @@ module.exports = {
     },
 
     waitFor: undefined,
-    screenshotAfterWaitFor: true
+    screenshotAfterWaitFor: true,
+
+    dataTemplate: function() {
+        return template;
+    }
 
 };
