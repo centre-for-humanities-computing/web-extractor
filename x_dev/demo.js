@@ -4,7 +4,7 @@ const path = require('path');
 const fileUtil = require('../util/file-util');
 const config = require('../config');
 
-let urlsPath = 'urls-test.txt';
+let urlsPath = path.join(__dirname, 'urls-test.txt');
 let destDir = 'd:/temp/gdpr-scrape';
 let maxConcurrency = 25;
 
@@ -12,7 +12,7 @@ config.debug = true;
 
 async function demo() {
 
-    let rules = await fileUtil.getCmpRules(path.join(__dirname, 'rules'));
+    let rules = await fileUtil.getCmpRules(path.join(__dirname, '../rules'));
     let urls = await fileUtil.getUrls(urlsPath);
 
     if (maxConcurrency > 10) {

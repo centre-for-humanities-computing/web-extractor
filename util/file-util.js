@@ -19,6 +19,9 @@ module.exports.getCmpRules = async function(dir) {
     for (let filename of filenames) {
         if (!filename.startsWith('__') && filename.endsWith('.js')) {
             let rule = require(path.join(dir, filename));
+            if (rule.dataTemplate !== undefined && typeof rule.dataTemplate !== 'function') {
+                throw Error(`The dataTemplate property of a rule must be a function or undefined`);
+            }
             rules.push(rule);
         }
     }

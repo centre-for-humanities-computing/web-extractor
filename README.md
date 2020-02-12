@@ -84,7 +84,10 @@ module.exports = {
 
     screenshotAfterWaitFor: false, // optional
 
-    extractor: function() {} // optional
+    dataTemplate: function() {} // optional
+    
+    extractor: function(template) {} // optional
+    
 };
 ```
 ##### cmpName
@@ -110,10 +113,19 @@ waitFor: async function(page) {
 ##### screenshotAfterWaitFor
 Type: `boolean`
 
-Should a screenshot after each waitFor? If `false` only the initial screenshot after page load will be saved.  
+Should a screenshot after each waitFor? If `false` only the initial screenshot after page load will be saved.
+
+##### dataTemplate
+Type: `function`\
+Returns: a template object to use as a starting point in the first extractor for the rule
+
+If the function is defined it must return a JSON compliant object which will be passed into the first
+extractor of the rule (see below). For each url the rule i tested against a new clone of the template
+object will be created, so it is safe to modify the template object in the extractor function
 
 ##### extractor
 Type: `function` | `array`\
+Parameter: `template` - a clone of the template object returned by `dataTemplate()` or `null` if `dataTemplate()` is not defined\
 Returns: the extraction result or one of: `null`, `undefined`, `[]` or `{}` if no result was found.
 
 The extractor function is executed in the context of the page so you have access to `document`, `window` etc.
