@@ -147,7 +147,8 @@ extractor: function() {
 
 Sometimes it is required to click buttons, wait for events to happen etc. to complete an extraction. The extractor can
 then be divided into multiple sections by providing an array of objects with one or both of `waitFor` and `extractor`. 
-Each extractor will get passed the return value from the previous extractor so you can add to this to get a combined result.
+Each extractor will get passed the return value from the previous extractor so you can add to this to get a combined result 
+(if present the `template` will be passed to the first object's extractor function).
 
 To wait for an element to appear, extract some text, 
 click next and extract some more text you could do:
