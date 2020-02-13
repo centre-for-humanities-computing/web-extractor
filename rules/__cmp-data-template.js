@@ -1,32 +1,30 @@
+//null means that our algorithm did not register the presence of something, which generally means it does not exist (but could mean that it does exist, but our algorithm is not built to detect it)
+//false means we are sure it does not exist
 module.exports = Object.freeze({
-    notificationStyle: null,
-    consentAction: {
-        visitPage: false,
-        scrollPage: false,
-        navigatePage: false,
-        closePopup: false,
-        refreshPage: false,
-        clickConsentButton: false
+    notificationStyle: null, //possible values: banner, barrier, custom
+    consent: {
+        type: null, //null, implied, explict
+        impliedConsentAction: {
+            visitPage: null,
+            scrollPage: null,
+            navigatePage: null,
+            closePopup: null,
+            refreshPage: null
+        }
     },
-    acceptAll: {
-        present: false,
+    acceptAllConsent: {
+        present: null,
         label: null,
         clicks: null
     },
-    rejectAll: {
-        present: false,
+    rejectAllConsent: {
+        present: null,
         label: null,
         clicks: null
     },
     bulkDescription: null,
-    purpose: {
-        present: false,
-        clicks: null, //TODO should this be 0 as default, does it belong under the labels?
-        labels: [] // {name {string}, description {string}, defaultStatus {boolean}, enabled: {boolean}}
-    },
-    vendor: {
-        present: false,
-        clicks: null, //TODO should this be 0 as default, does it belong under the labels?
-        labels: [] // {name {string}, description {string}, defaultStatus {boolean}, enabled: {boolean}}
-    }
+    bulkDescriptionHTML: null, //because sometimes innerText does not get all data when it includes span elements
+    purposeConsent: [], //{name, description, clicksRequiredToAccess, hasConsentOption, consentOptionDisabled, consentOptionDefaultStatus}
+    vendorConsent: [], // {name, description, clicksRequiredToAccess, hasConsentOption, consentOptionDisabled, consentOptionDefaultStatus, purposeCategory}
+    html: null
 });

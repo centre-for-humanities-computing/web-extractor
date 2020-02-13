@@ -1,7 +1,11 @@
 # test web pages
-dr.dk
-tv2.dk
+#cookiebot
+#dr.dk
+#eng-tips.com
 alt.dk
-boersen.dk
-billetlugen.dk
-bilbasen.dk
+#boersen.dk
+#cookieinformation
+#tv2.dk
+#other
+#billetlugen.dk
+#bilbasen.dk
