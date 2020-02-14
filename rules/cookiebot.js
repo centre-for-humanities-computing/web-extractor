@@ -1,3 +1,4 @@
+//TODO simulate clicks on each element and take screenshots of each
 const template = require('./__cmp-data-template');
 
 module.exports = {
@@ -51,19 +52,19 @@ module.exports = {
 
                 if (acceptBtn.style.display !== 'none') {
                     template.acceptAllConsent.present = true;
-                    template.acceptAllConsent.label = acceptBtn.innerText;
+                    template.acceptAllConsent.buttonText = acceptBtn.innerText;
                     template.acceptAllConsent.clicks = 0;
                 }
 
                 if (rejectBtn.style.display !== 'none') {
                     template.rejectAllConsent.present = true;
-                    template.rejectAllConsent.label = rejectBtn.innerText;
+                    template.rejectAllConsent.buttonText = rejectBtn.innerText;
                     template.rejectAllConsent.clicks = 0;
                 }
             } else if (dialogBodyLevelWrapperDisplay !== 'none') {
-                const acceptBtn = document.getElementById( 'CybotCookiebotDialogBodyLevelButtonAccept');
+                const acceptBtn = document.getElementById('CybotCookiebotDialogBodyLevelButtonAccept');
                 template.acceptAllConsent.present = true;
-                template.acceptAllConsent.label = acceptBtn.innerText;
+                template.acceptAllConsent.buttonText = acceptBtn.innerText;
                 template.acceptAllConsent.clicks = 0;
             }
 
@@ -74,89 +75,169 @@ module.exports = {
 
             //purposes
             const purposeElementOnFirstPage = document.getElementById("CybotCookiebotDialogBodyLevelWrapper");
-            const purposeElementOnSecondPage = document.getElementById('CybotCookiebotDialogDetailBodyContentCookieContainerTypes');
-
-
-            //getPurposeInfoFirstPage
-            //getPurposeInfoSecondPage
-            //mergePurposeInfo
-
-
-
-            if (purposeElementOnFirstPage.style.display !== 'none' && purposeElementOnFirstPage.style.display !== '') {
-                const allPurposesOnFirstPage = document.getElementById('CybotCookiebotDialogBodyLevelButtonsSelectPane').children
+            let purposeInfoFromFirstPage = [];
+            if (window.getComputedStyle(purposeElementOnFirstPage).display !== 'none') {
+                const allPurposesOnFirstPage = document.getElementById('CybotCookiebotDialogBodyLevelButtonsSelectPane').children;
 
                 for (const purpose of allPurposesOnFirstPage) {
-                    const label = purpose.querySelector('label').innerText;
+                    const name = purpose.querySelector('label').innerText;
                     const hasConsentOption = true;
                     const consentOptionDisabled = purpose.querySelector('input').disabled;
                     const consentOptionDefaultStatus = purpose.querySelector('input').checked;
-                    const clicks = 0;
-                    const descriptionId = '#' + purpose.querySelector('input').id.replace('BodyLevelButton', 'DetailBodyContentCookieTabs');
-                    const description = document.querySelector(descriptionId + " .CybotCookiebotDialogDetailBodyContentCookieTypeIntro").innerText;
-
-                    template.purposeConsent.push({'name': label, 'description': description, 'clicksRequiredToAccess': clicks, 'hasConsentOption': hasConsentOption, 'consentOptionDisabled': consentOptionDisabled, 'consentOptionDefaultStatus': consentOptionDefaultStatus})
+                    const clicksRequiredToAccess = 0;
+                    purposeInfoFromFirstPage.push({
+                        'name': name,
+                        'clicksRequiredToAccess': clicksRequiredToAccess,
+                        'hasConsentOption': hasConsentOption,
+                        'consentOptionDisabled': consentOptionDisabled,
+                        'consentOptionDefaultStatus': consentOptionDefaultStatus
+                    })
                 }
+            }
 
-                //now that we have all the info from the first page, we have to augment this with the purposes from the 2nd page
-                for (const purpose of purposeElementOnSecondPage.children) {
-                    let label = purpose.innerText.split(' ')[0].trim();
-                    let purposeAlreadyExists = template.purposeConsent.filter(existingPurpose => existingPurpose.name === label);
-
-                    if (!purposeAlreadyExists.length) {
-                        const purposeData = getSecondPagePurposeDetail(purpose)
-                        template.purposeConsent.push(purposeData)
-                    }
-                }
-            } else if (purposeElementOnSecondPage) {
+            const purposeElementOnSecondPage = document.getElementById('CybotCookiebotDialogDetailBodyContentCookieContainerTypes');
+            let purposeInfoFromSecondPage = [];
+            if (window.getComputedStyle(purposeElementOnSecondPage).display !== 'none') {
                 const allPurposesOnSecondPage = purposeElementOnSecondPage.children;
                 for (const purpose of allPurposesOnSecondPage) {
-                    const purposeData = getSecondPagePurposeDetail(purpose);
-                    template.purposeConsent.push(purposeData)
+                    let name = purpose.innerText.split(' ')[0].trim();
+                    let hasConsentOption = null;
+                    let consentOptionDisabled = null;
+                    let consentOptionDefaultStatus = null;
+                    const clicksRequiredToAccess = 1;
+
+                    if (!purpose.querySelector('a .CybotCookiebotDialogBodyLevelButton')) {
+                        hasConsentOption = false
+                    } else {
+                        consentOptionDisabled = purpose.querySelector('a .CybotCookiebotDialogBodyLevelButton').disabled;
+                        consentOptionDefaultStatus = purpose.querySelector('a .CybotCookiebotDialogBodyLevelButton').checked;
+                        hasConsentOption = true
+                    }
+
+                    const descriptionId = '#' + purpose.id.replace('Container', 'Tabs');
+                    const description = document.querySelector(descriptionId + " .CybotCookiebotDialogDetailBodyContentCookieTypeIntro").innerText;
+
+                    purposeInfoFromSecondPage.push({
+                        'name': name,
+                        'description': description,
+                        'clicksRequiredToAccess': clicksRequiredToAccess,
+                        'hasConsentOption': hasConsentOption,
+                        'consentOptionDisabled': consentOptionDisabled,
+                        'consentOptionDefaultStatus': consentOptionDefaultStatus
+                    })
                 }
             }
 
-            //this function extracts the purpose information from the second page and returns it as an object
-            function getSecondPagePurposeDetail(purpose) {
-                let label = purpose.innerText.split(' ')[0].trim();
-                let hasConsentOption = null;
-                let consentOptionDisabled = null;
-                let consentOptionDefaultStatus = null;
-                const clicks = 1;
+            const IABPage = document.querySelector('#CybotCookiebotDialogDetailBodyContentTabsIAB');
+            let purposeInfoFromIABPage = [];
 
-                if (!purpose.querySelector('a .CybotCookiebotDialogBodyLevelButton')) {
-                    hasConsentOption = false
-                } else {
-                    consentOptionDisabled = purpose.querySelector('a .CybotCookiebotDialogBodyLevelButton').disabled;
-                    consentOptionDefaultStatus = purpose.querySelector('a .CybotCookiebotDialogBodyLevelButton').checked;
-                    hasConsentOption = true
+            if (window.getComputedStyle(IABPage).display !== 'none') {
+                //get purposes
+                const IABpurposes = document.querySelectorAll('.CybotCookiebotDialogBodyIABButtonPurposes');
+                for (const IABPurpose of IABpurposes) {
+                    const name = IABPurpose.parentElement.querySelector('label').innerText;
+                    const description = IABPurpose.parentElement.nextElementSibling.innerText;
+                    const clicksRequiredToAccess = 2;
+                    const consentOptionDisabled = IABPurpose.disabled;
+                    const consentOptionDefaultStatus = IABPurpose.checked;
+
+                    let hasConsentOption = null;
+                    if (IABPurpose.type === 'checkbox') {
+                        hasConsentOption = true;
+                    }
+
+                    purposeInfoFromIABPage.push({
+                        'name': name,
+                        'description': description,
+                        'clicksRequiredToAccess': clicksRequiredToAccess,
+                        'hasConsentOption': hasConsentOption,
+                        'consentOptionDisabled': consentOptionDisabled,
+                        'consentOptionDefaultStatus': consentOptionDefaultStatus
+                    })
                 }
 
-                const descriptionId = '#' + purpose.id.replace('Container', 'Tabs');
-                const description = document.querySelector(descriptionId + " .CybotCookiebotDialogDetailBodyContentCookieTypeIntro").innerText;
+                const IABvendors = document.querySelectorAll('.CybotCookiebotDialogBodyIABButtonVendors');
+                for (const IABvendor of IABvendors) {
+                    const name = IABvendor.parentElement.querySelector('label').innerText;
+                    const description = IABvendor.parentElement.nextElementSibling.innerHTML;
+                    const clicksRequiredToAccess = 2;
+                    const consentOptionDisabled = IABvendor.disabled;
+                    const consentOptionDefaultStatus = IABvendor.checked;
 
-                return {'name': label, 'description': description,  'clicksRequiredToAccess': clicks, 'hasConsentOption': hasConsentOption, 'consentOptionDisabled': consentOptionDisabled, 'consentOptionDefaultStatus': consentOptionDefaultStatus};
+                    let hasConsentOption = null;
+                    if (IABvendor.type === 'checkbox') {
+                        hasConsentOption = true;
+                    }
+
+                    template.vendorConsent.push({
+                        'name': name,
+                        'description': description,
+                        'clicksRequiredToAccess': clicksRequiredToAccess,
+                        'hasConsentOption': hasConsentOption,
+                        'consentOptionDisabled': consentOptionDisabled,
+                        'consentOptionDefaultStatus': consentOptionDefaultStatus,
+                        'purposeCategory': null
+                    })
+                }
             }
 
-            function getVendorDetail(purpose) {
-
+            function findMergeableIndex(object1, remainingObjects) {
+                for (var i = 0; i < remainingObjects.length; i++) {
+                    let object = remainingObjects[i];
+                    for (let [key, value] of Object.entries(object)) {
+                        if (object1[key] == value) {
+                            return i
+                        }
+                    }
+                }
+                return -1
             }
 
+            function mergex(array1, array2) {
+                let remainingObjects = [...array2];
+                let result = [];
+                for (let object1 of array1) {
+                    let mergeableIndex = findMergeableIndex(object1, remainingObjects);
+                    if (mergeableIndex >= 0) {
+                        let mergeableObject = remainingObjects[mergeableIndex];
+                        // array.splice(start_index, no_of_elements)
+                        remainingObjects.splice(mergeableIndex, 1);
+                        //merge
+                        for (let key in object1) {
+                            mergeableObject[key] = object1[key]
+                        }
+                        result.push(mergeableObject)
+                    } else {
+                        result.push(object1)
+                    }
+                }
+                //adding all non-duplicates
+                for (let remainingObject of remainingObjects) {
+                    result.push(remainingObject)
+                }
 
-            //vendor
-            // let vendors = purposeElementOnSecondPage.querySelectorAll("tbody tr")
-            // vendorLabels.map(function(vendor) {
-            //     var vendorLabel = vendor.childNodes[0].innerText.replace(/\./g,'_');
-            //     CookieConsentObject.vendorLabels.push({[vendorLabel]: categoryLabel})
-            //     if (vendor.childNodes.length > 1) {
-            //         CookieConsentObject.vendorDescriptions.push({[vendorLabel]: vendor.childNodes[2].innerText})
-            //         CookieConsentObject.vendorEnabled.push({[vendorLabel]: 'disabled'})
-            //     } else {
-            //         CookieConsentObject.vendorDescriptions.push({[vendorLabel]: 'NA'})
-            //         CookieConsentObject.vendorEnabled.push({[vendorLabel]: 'NA'})
-            //     }
-            //     CookieConsentObject.vendorDefaultStatus.push({[vendorLabel]: 'NA'})
-            // })
+                return result
+            }
+
+            //merge the info of the different purpose pages and push them to the template object
+            if (purposeInfoFromFirstPage.length && purposeInfoFromSecondPage.length && purposeInfoFromIABPage.length) {
+                let firstMerge = mergex(purposeInfoFromFirstPage, purposeInfoFromSecondPage);
+                let concatenatedArray = firstMerge.concat(purposeInfoFromIABPage);
+                template.purposeConsent.push(concatenatedArray)
+            } else if (purposeInfoFromFirstPage.length && purposeInfoFromSecondPage.length) {
+                let mergedPurposeInfo = mergex(purposeInfoFromFirstPage, purposeInfoFromSecondPage);
+                template.purposeConsent.push(mergedPurposeInfo)
+            } else if (!purposeInfoFromFirstPage.length && purposeInfoFromIABPage.length) {
+                let concatenatedArray = purposeInfoFromSecondPage.concat(purposeInfoFromIABPage);
+                template.purposeConsent.push(concatenatedArray)
+            } else if (!purposeInfoFromFirstPage.length) {
+                template.purposeConsent.push(purposeInfoFromSecondPage)
+            } else if (!purposeInfoFromSecondPage.length && purposeInfoFromIABPage.length) {
+                let concatenatedArray = purposeInfoFromFirstPage.concat(purposeInfoFromIABPage);
+                template.purposeConsent.push(concatenatedArray)
+            } else if (!purposeInfoFromSecondPage.length) {
+                template.purposeConsent.push(purposeInfoFromFirstPage)
+            }
 
             return template;
         }

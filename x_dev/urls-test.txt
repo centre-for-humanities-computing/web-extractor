@@ -2,9 +2,41 @@
 #cookiebot
 #dr.dk
 #eng-tips.com
-alt.dk
-#boersen.dk
+#alt.dk
+#lawandcrime.com
+#has no purpose controls
+#spacenk.com
+#has extra tab with purpose info
+#androidauthority.com
+#has styled popup
+#artfinder.com
+#has styled popup
+#avira.com
+#has styled popup
+#databricks.com
+#has reject button
+#digital.nhs.uk
+#has reject button but no purpose/vendor
+#digitaltrends.com
+#has styled popup, only 2 columns of purpose info
+#gatwickexpress.com
+#has really old, totally different cookiebot styling?
+#tecnavia.com
+#nothing prechecked
+northamptonshire.gov.uk
+#has vendor controls on extra tab
+racingpost.com
+#vendor controls
+ruck.co.uk
+#vendor controls (but styled to be invisible)
+#spartan.com
+#has extra check box to reject onfirst page + vendor controls
+#thespun.com
+#vendor controls
+#thameslinkrailway.com
+#new version of cookiebot
 #cookieinformation
+#boersen.dk
 #tv2.dk
 #other
 #billetlugen.dk
