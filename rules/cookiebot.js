@@ -1,11 +1,15 @@
 //TODO simulate clicks on each element and take screenshots of each
+//TODO add the weird 'features' on the IAB tab to the purpose array
+//TODO perhaps remove provider, expiryDate, type from vendor info, since this info isn't available for any other CMP
 const template = require('./__cmp-data-template');
 
 module.exports = {
 
     cmpName: 'Cookiebot',
 
-    waitFor: undefined,
+    dataTemplate: function() {
+        return template;
+    },
 
     extractor: function(template) {
 
@@ -25,7 +29,7 @@ module.exports = {
                 template.notificationStyle = 'custom'
             }
 
-            //consent action
+            //consent
             if (window.CookieConsent.dialog.consentLevel === 'implied') {
                 template.consent.type = 'implied';
                 checkConsentAction()
@@ -53,19 +57,19 @@ module.exports = {
                 if (acceptBtn.style.display !== 'none') {
                     template.acceptAllConsent.present = true;
                     template.acceptAllConsent.buttonText = acceptBtn.innerText;
-                    template.acceptAllConsent.clicks = 0;
+                    template.acceptAllConsent.clicksRequiredToAccess = 0;
                 }
 
                 if (rejectBtn.style.display !== 'none') {
                     template.rejectAllConsent.present = true;
                     template.rejectAllConsent.buttonText = rejectBtn.innerText;
-                    template.rejectAllConsent.clicks = 0;
+                    template.rejectAllConsent.clicksRequiredToAccess = 0;
                 }
             } else if (dialogBodyLevelWrapperDisplay !== 'none') {
                 const acceptBtn = document.getElementById('CybotCookiebotDialogBodyLevelButtonAccept');
                 template.acceptAllConsent.present = true;
                 template.acceptAllConsent.buttonText = acceptBtn.innerText;
-                template.acceptAllConsent.clicks = 0;
+                template.acceptAllConsent.clicksRequiredToAccess = 0;
             }
 
             //bulk description
@@ -100,7 +104,7 @@ module.exports = {
             if (window.getComputedStyle(purposeElementOnSecondPage).display !== 'none') {
                 const allPurposesOnSecondPage = purposeElementOnSecondPage.children;
                 for (const purpose of allPurposesOnSecondPage) {
-                    let name = purpose.innerText.split(' ')[0].trim();
+                    const name = purpose.innerText.split(' ')[0].trim();
                     let hasConsentOption = null;
                     let consentOptionDisabled = null;
                     let consentOptionDefaultStatus = null;
@@ -176,7 +180,7 @@ module.exports = {
                         'hasConsentOption': hasConsentOption,
                         'consentOptionDisabled': consentOptionDisabled,
                         'consentOptionDefaultStatus': consentOptionDefaultStatus,
-                        'purposeCategory': null
+                        'purposeCategory': [null] //AFAIK, no way of knowing which purpose this vendor belongs to
                     })
                 }
             }
@@ -245,10 +249,6 @@ module.exports = {
 
     },
     screenshotAfterWaitFor: true,
-
-    dataTemplate: function() {
-        return template;
-    }
 }
 
 ;

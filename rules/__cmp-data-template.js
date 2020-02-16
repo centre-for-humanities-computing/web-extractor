@@ -4,7 +4,7 @@
 module.exports = Object.freeze({
     notificationStyle: null, //possible values: banner, barrier, custom
     consent: {
-        type: null, //null, implied, explict
+        type: null, //implied, explict
         impliedConsentAction: {
             visitPage: null,
             scrollPage: null,
@@ -16,16 +16,16 @@ module.exports = Object.freeze({
     acceptAllConsent: {
         present: null,
         buttonText: null,
-        clicks: null
+        clicksRequiredToAccess: null
     },
     rejectAllConsent: {
         present: null, //only counts if the reject all button turns off all options that can be turned off manually
         buttonText: null,
-        clicks: null
+        clicksRequiredToAccess: null
     },
     bulkDescription: null,
     bulkDescriptionHTML: null, //because sometimes innerText does not get all data when it includes span elements
     purposeConsent: [], //{name, description, clicksRequiredToAccess, hasConsentOption, consentOptionDisabled, consentOptionDefaultStatus}
-    vendorConsent: [], // {name, description, provider, expiryDate, type, clicksRequiredToAccess, hasConsentOption, consentOptionDisabled, consentOptionDefaultStatus, purposeCategory}
+    vendorConsent: [], // {name:string, description:string, (provider, expiryDate, type,)>cookiebot clicksRequiredToAccess:integer, hasConsentOption:boolean, consentOptionDisabled:boolean, consentOptionDefaultStatus:boolean, purposeCategory:[]}
     html: null
 });
