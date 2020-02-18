@@ -10,6 +10,7 @@ const singleLineLog = require('single-line-log').stdout;
 const optDesc = {
     urls: `A path to a file with a list of urls for extraction. Each url should be on it's own line`,
     destination: `A path to the dir where data should be saved. If the dir already contains previous collected data the new data will be appended to the existing files`,
+    rules: `A path to the dir where extraction rules are located. If not set the "rules" folder in project will be used as default`,
     concurrency: `The maximum simultaneous loaded web pages`,
     noScreenshot: `Disable screenshots`,
     pageTimeout: `Milliseconds to wait for the initial loading of a page`,
@@ -23,6 +24,7 @@ async function run() {
     try {
         cli.requiredOption('-u, --urls <file>', optDesc.urls);
         cli.requiredOption('-d, --destination <directory>', optDesc.destination);
+        cli.option('-r, --rules <directory>', optDesc.rules);
         cli.option('-c, --concurrency <integer>', optDesc.concurrency, CmpExtractor.DEFAULT_OPTIONS.maxConcurrency);
         cli.option('-n, --no-screenshot', optDesc.noScreenshot);
         cli.option('-t, --page-timeout <integer>', optDesc.pageTimeout, CmpExtractor.DEFAULT_OPTIONS.pageTimeoutMs);
@@ -33,6 +35,7 @@ async function run() {
 
         let urlsPath = cli.urls;
         let destDir = cli.destination;
+        let rulesDir = cli.rules;
         let concurrency = Math.max(1, parseIntOrThrow(cli.concurrency));
         let takeScreenshot = cli.screenshot;
         let pageTimeout = Math.max(1, parseIntOrThrow(cli.pageTimeout));
@@ -41,7 +44,11 @@ async function run() {
 
         config.debug = debug;
 
-        let rules = await fileUtil.getCmpRules(path.join(__dirname, 'rules'));
+        if (!rulesDir) {
+            rulesDir = path.join(__dirname, 'rules');
+        }
+
+        let rules = await fileUtil.getCmpRules(rulesDir);
         let urls = await fileUtil.getUrls(urlsPath);
 
         if (concurrency > 10) {
