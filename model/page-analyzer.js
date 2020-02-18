@@ -57,9 +57,11 @@ class PageAnalyzer {
                     dataTemplate = _.cloneDeep(dataTemplate); //user can make changes to template, so make sure to make a new copy for every run
                 }
 
-                let extractors = _.clone(rule.extractor); // clone because we modify below
+                let extractors = null;
 
-                if (!_.isArray(extractors)) {
+                if (_.isArray(rule.extractor)) {
+                    extractors = _.clone(rule.extractor); // we will make changes to the array so clone it
+                } else {
                     extractors = [
                         {extractor: rule.extractor}
                     ];

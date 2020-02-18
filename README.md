@@ -27,6 +27,7 @@ $ node extract -h
 ### CLI options
 - **`-u, --urls <file>`** [required] - A path to a file with a list of urls for extraction. Each url in the file should be on it's own line
 - **`-d, --destination <directory>`** [required] - A path to the dir where data should be saved. If the dir already contains previous collected data the new data will be appended to the existing files
+- **`-r, --rules <directory>`** [optional] - A path to the dir where extraction rules are located. If not set the "rules" folder in project will be used as default
 - **`-c, --concurrency <integer>`** [optional, default=25] - The maximum simultaneous loaded pages
 - **`-n, --no-screenshot`** [optional] - Disable screenshots
 - **`-t, --page-timeout <integer>`** [optional, default=60000] - Milliseconds to wait for the initial loading of a page
@@ -59,14 +60,14 @@ self contained json-object, which makes it easy to parse large files line by lin
 **screenshots** contains one or more screenshots for each url where a rule matched.
 
 ### Resuming a Previous Extraction
-If a path to a directory containing previous extracted data is passed in Cmp-extractor will
+If a path to a directory containing previous extracted data is passed in, Cmp-extractor will
 add to the existing files and screenshot directory instead of creating a new directory. 
 
 
 ## Extraction Rules
-The extraction rules can be found in the `rules` directory of the project. 
 Each rule is tested one by one in alphabetical order until a match is found. 
 In the event of a match the result is saved and any remaining rules are aborted.
+If no `rules` path is passed in the default extraction rules, located in the `rules` directory of the project, will be used.
 
 ### Disabling and Deleting Rules
 A rule can be temporarily disabled by prefixing the file name with double underscore e.g. `__cookiebot.js`. To completely
