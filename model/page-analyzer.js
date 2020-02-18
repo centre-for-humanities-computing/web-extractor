@@ -59,12 +59,12 @@ class PageAnalyzer {
 
                 let extractors = null;
 
-                if (!_.isArray(rule.extractor)) {
+                if (_.isArray(rule.extractor)) {
+                    extractors = _.clone(rule.extractor); // we will make changes to the array so clone it
+                } else {
                     extractors = [
                         {extractor: rule.extractor}
                     ];
-                } else {
-                    extractors = _.clone(rule.extractor); // we will make changes to the array so clone it
                 }
 
                 // add the root waitFor to the list of extractors
