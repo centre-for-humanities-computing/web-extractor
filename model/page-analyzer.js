@@ -61,25 +61,33 @@ class PageAnalyzer {
 
                 if (_.isArray(rule.extractor)) {
                     extractors = _.clone(rule.extractor); // we will make changes to the array so clone it
+                    // add the root waitFor to the list of extractors
+                    if (rule.waitFor) {
+                        extractors.unshift({
+                            waitFor: rule.waitFor
+                        });
+                    }
                 } else {
-                    extractors = [
-                        {extractor: rule.extractor}
-                    ];
-                }
-
-                // add the root waitFor to the list of extractors
-                if (rule.waitFor) {
-                    extractors.unshift({
+                    extractors = [{
+                        extractor: rule.extractor,
                         waitFor: rule.waitFor
-                    });
+                    }];
                 }
 
                 let cmpData = dataTemplate;
 
-                for (let extractor of extractors) {
+                for (let i = 0; i < extractors.length;) {
+                    let extractor = extractors[i];
                     if (extractor.waitFor) {
                         try {
-                            await extractor.waitFor(page);
+                            let nextExtractorIndex = await extractor.waitFor(page);
+                            if (_.isInteger(nextExtractorIndex)) {
+                                i = nextExtractorIndex;
+                                if (config.debug) {
+                                    console.log(`Jumping to extractor at index: ${nextExtractorIndex}`);
+                                }
+                                continue;
+                            }
                             if (screenshot && rule.screenshotAfterWaitFor) {
                                 await page.screenshot({path: this._getScreenshotPath(screenshot.dirPath, screenshot.imageName)});
                             }
@@ -98,6 +106,7 @@ class PageAnalyzer {
                     if (extractor.extractor) {
                         cmpData = await page.evaluate(extractor.extractor, cmpData);
                     }
+                    i++;
                 }
 
                 if (PageAnalyzer.isRuleMatch(cmpData)) {

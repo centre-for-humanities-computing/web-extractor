@@ -17,6 +17,7 @@
     "p-queue": "^6.2.1",
     "puppeteer": "^2.1.0",
     "single-line-log": "^1.1.2",
-    "uniqid": "^5.2.0"
+    "uniqid": "^5.2.0",
+    "line-reader": "latest"
   }
 }
