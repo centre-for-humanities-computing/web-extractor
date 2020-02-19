@@ -180,7 +180,7 @@ module.exports = {
                         'hasConsentOption': hasConsentOption,
                         'consentOptionDisabled': consentOptionDisabled,
                         'consentOptionDefaultStatus': consentOptionDefaultStatus,
-                        'purposeCategory': [null] //AFAIK, no way of knowing which purpose this vendor belongs to
+                        'purposeCategory': [] //AFAIK, no way of knowing which purpose this vendor belongs to
                     })
                 }
             }

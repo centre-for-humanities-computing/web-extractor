@@ -4,13 +4,14 @@
 module.exports = Object.freeze({
     notificationStyle: null, //possible values: banner, barrier, custom
     consent: {
-        type: null, //implied, explict
+        type: null, //implied, explict, custom
         impliedConsentAction: {
             visitPage: null,
             scrollPage: null,
             navigatePage: null,
             closePopup: null,
-            refreshPage: null
+            refreshPage: null,
+            clickPage: null
         }
     },
     acceptAllConsent: {

@@ -27,19 +27,22 @@ module.exports = {
                         template.notificationStyle = 'custom'
                     };
 
+
                     //consent
                     //as far as we are able to tell, quantcast does not allow implied consent
                     template.consent.type = 'explicit'
 
                     //accept all
-                    if (document.querySelector("#qcCmpButtons button[onclick='window.__cmpui(\"setAndSaveAllConsent\",!0)\']") && document.querySelector("#qcCmpButtons button[onclick=\'window.__cmpui(\"setAndSaveAllConsent\",!0)\']").offsetHeight !== 0) {
+                    if (document.querySelector("#qcCmpButtons button[onclick*=\'window.__cmpui(\"setAndSaveAllConsent\",!0)\']")
+                        && document.querySelector("#qcCmpButtons button[onclick*=\'window.__cmpui(\"setAndSaveAllConsent\",!0)\']").offsetHeight !== 0) {
                         template.acceptAllConsent.present = true;
-                        template.acceptAllConsent.buttonText = document.querySelector("#qcCmpButtons button[onclick=\'window.__cmpui(\"setAndSaveAllConsent\",!0)\']").innerText;
+                        template.acceptAllConsent.buttonText = document.querySelector("#qcCmpButtons button[onclick*=\'window.__cmpui(\"setAndSaveAllConsent\",!0)\']").innerText;
                         template.acceptAllConsent.clicksRequiredToAccess = 0;
                     }
 
                     //reject all
-                    if (document.querySelector(".qc-cmp-button.qc-cmp-secondary-button") && document.querySelector(".qc-cmp-button.qc-cmp-secondary-button").offsetHeight !== 0 && document.querySelector(".qc-cmp-button.qc-cmp-secondary-button").innerText.toLowerCase() !== "more options") {
+                    if (document.querySelector(".qc-cmp-button.qc-cmp-secondary-button") && document.querySelector(".qc-cmp-button.qc-cmp-secondary-button").offsetHeight !== 0
+                        && document.querySelector(".qc-cmp-button.qc-cmp-secondary-button").innerText.toLowerCase() !== "more options") {
                         template.rejectAllConsent.present = true;
                         template.rejectAllConsent.buttonText = document.querySelector(".qc-cmp-button.qc-cmp-secondary-button").innerText;
                         template.rejectAllConsent.clicksRequiredToAccess = 0;
@@ -184,7 +187,7 @@ module.exports = {
                     } else {
                         hasConsentOption = false;
                     }
-                    
+
                     passedData.template.vendorConsent.push({
                         'name': name,
                         'description': description,

@@ -1,4 +1,5 @@
 # test web pages
+
 #cookiebot
 #dr.dk
 #eng-tips.com
@@ -23,11 +24,11 @@
 #has really old, totally different cookiebot styling?
 #tecnavia.com
 #nothing prechecked
-northamptonshire.gov.uk
+#northamptonshire.gov.uk
 #has vendor controls on extra tab
-racingpost.com
+#racingpost.com
 #vendor controls
-ruck.co.uk
+#ruck.co.uk
 #vendor controls (but styled to be invisible)
 #spartan.com
 #has extra check box to reject onfirst page + vendor controls
@@ -38,6 +39,31 @@ ruck.co.uk
 #cookieinformation
 #boersen.dk
 #tv2.dk
+
+#quantcast
+#fiso.co.uk
+#no reject all, banner
+#gamersheroes.com
+#reject all, banner
+#novelupdates.com
+#no reject all, barrier
+
+#onetrust
+#adultswim.com
+#allegisgroup.com
+#ncaa.com
+#sigmalive.com
+#teamcoco.com
+#toughmudder.co.uk
+#viglink.com
+16-25railcard.co.uk
+#20cogs.co.uk
+#2k.com
+#3dmark.com
+#aao.org
+#accenture.com
+#accesso.com
+
 #other
 #billetlugen.dk
 #bilbasen.dk
