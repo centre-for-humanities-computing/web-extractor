@@ -16,13 +16,12 @@ function extractProperties(object, properties) {
 
 async function map(srcFile, destFile, properties) {
     let dest = null;
-    let stream = null;
     try {
         await fs.mkdir(path.dirname(destFile), {recursive: true});
         dest = await fs.open(destFile, 'a');
 
         let readerPromise = new Promise((function(resolve, reject) {
-            lineReader.eachLine(srcFile, {encoding: 'utf8', separator: /\n/},async (line, isLast) => {
+            lineReader.eachLine(srcFile, {encoding: 'utf8', separator: '\n'},async (line, isLast) => {
                 try {
                     let json = JSON.parse(line);
                     let result = extractProperties(json, properties);
