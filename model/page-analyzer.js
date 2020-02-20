@@ -60,18 +60,9 @@ class PageAnalyzer {
                 let extractors = null;
 
                 if (_.isArray(rule.extractor)) {
-                    extractors = _.clone(rule.extractor); // we will make changes to the array so clone it
-                    // add the root waitFor to the list of extractors
-                    if (rule.waitFor) {
-                        extractors.unshift({
-                            waitFor: rule.waitFor
-                        });
-                    }
+                    extractors = _.clone(rule.extractor); // get a local copy
                 } else {
-                    extractors = [{
-                        extractor: rule.extractor,
-                        waitFor: rule.waitFor
-                    }];
+                    extractors = [rule.extractor];
                 }
 
                 let cmpData = dataTemplate;
@@ -103,8 +94,8 @@ class PageAnalyzer {
                         }
                     }
 
-                    if (extractor.extractor) {
-                        cmpData = await page.evaluate(extractor.extractor, cmpData);
+                    if (extractor.extract) {
+                        cmpData = await page.evaluate(extractor.extract, cmpData);
                     }
                     i++;
                 }

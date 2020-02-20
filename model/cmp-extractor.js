@@ -128,7 +128,10 @@ class CmpExtractor {
                 }
 
                 let json = JSON.stringify(entry);
-                await this._cmpDataFile.appendFile(json + '\n', 'utf8');
+
+                await this._cmpDataFile.appendFile(json, 'utf8');
+                //avoid concatenating large strings
+                await this._cmpDataFile.appendFile('\n', 'utf8');
             }
 
             this._progression.completed++;
