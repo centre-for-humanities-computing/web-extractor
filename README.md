@@ -63,7 +63,6 @@ self contained json-object, which makes it easy to parse large files line by lin
 If a path to a directory containing previous extracted data is passed in, Cmp-extractor will
 add to the existing files and screenshot directory instead of creating a new directory. 
 
-
 ## Extraction Rules
 Each rule is tested one by one in alphabetical order until a match is found. 
 In the event of a match the result is saved and any remaining rules are aborted.
@@ -81,35 +80,21 @@ structure:
 module.exports = {
     cmpName: 'name of cmp', //required
 
-    waitFor: async function(page) {}, // optional
-
     screenshotAfterWaitFor: false, // optional
 
     dataTemplate: function() {} // optional
     
-    extractor: function(template) {} // optional
+    extractor: {
+        waitFor: async function(page) {}, // optional 
+        extract: function(template) {} // optional
+     }
     
 };
 ```
 ##### cmpName
 Type: `string`
 
-The name of the CMP or some other name identifying the extracted data
-
-##### waitFor
-
-Type: `async function`\
-Parameter: `page` - an instance of a [puppeteer page](https://github.com/puppeteer/puppeteer/blob/v2.1.0/docs/api.md#class-page)
-
-The extraction engine will wait for this method to complete before running the `extractor` function(s).
-
-To wait for a given DOM-element to become present you can do:
-
-```
-waitFor: async function(page) {
-    await page.waitFor('#my-element' {timeout: 5000});
-}
-```
+The name of the CMP or some other name identifying the extracted data.
 
 ##### screenshotAfterWaitFor
 Type: `boolean`
@@ -122,34 +107,83 @@ Returns: a template object to use as a starting point in the first extractor for
 
 If the function is defined it must return a JSON compliant object which will be passed into the first
 extractor of the rule (see below). For each url the rule i tested against a new clone of the template
-object will be created, so it is safe to modify the template object in the extractor function
+object, so it is safe to modify the template object in the `extract` method.
 
 ##### extractor
-Type: `function` | `array`\
-Parameter: `template` - a clone of the template object returned by `dataTemplate()` or `null` if `dataTemplate()` is not defined\
-Returns: the extraction result or one of: `null`, `undefined`, `[]` or `{}` if no result was found.
+Type: `object` | `array`
 
-The extractor function is executed in the context of the page so you have access to `document`, `window` etc.
+The extractor object should have one or both of the following methods:
 
-To extract all paragraph text from a page you can do: 
+##### waitFor
+
+Type: `async function`\
+Parameter: `page` - an instance of a [puppeteer page](https://github.com/puppeteer/puppeteer/blob/v2.1.0/docs/api.md#class-page)\
+Returns: the index of the next extractor to execute or `undefined` (default) if the normal order of execution should be followed
+
+The extraction engine will wait for this method to complete before running the `extract` method.
+
+In the case of a `puppeteer.errors.TimeoutError` the next rule (if present) wil we tested. 
+All other errors will be seen as an actual error and the following rules will be aborted and the error logged.
+
+To wait for a given DOM-element to become present you could do:
 
 ```
-extractor: function() {
-    let results = [];
-    let paragraphs = document.querySelector('p');
-    if (p) {
-        for (let p of paragraphs) {
-            results.push(p.textContent);
-        }
-    }
-    return results;
+extractor: { 
+    waitFor: async function(page) {
+        await page.waitFor('#my-element' {timeout: 5000});
+    },
+    extract() {...}
 }
 ```
 
+When the `extractor` is made up of more extractors (see [Multiple Extractors](#multiple-extractors)) it can be desirable to be able to choose which
+extractor to run next depending on a condition in `waitFor`. This can be controlled by returning the index of 
+the next extractor to run. E.g.
+
+```
+extractor: {
+    waitFor: async function(page) {
+        try {
+            await page.waitFor('#my-element' {timeout: 5000});
+            return 2;
+        } catch(e) {
+            return 3;
+        }
+    }
+}
+```
+
+
+##### extract
+Type: `function`\
+Parameter: `template` - a clone of the template object returned by `dataTemplate()` or `null` if `dataTemplate()` is not defined\
+Returns: the extraction result or one of: `null`, `undefined`, `[]` or `{}` if no result was found
+
+The `extract` method is executed in the context of the page so you have access to `document`, `window` etc.
+
+To extract all paragraph text from a page you could do: 
+
+```
+extractor: {
+    extract: function() {
+        let results = [];
+        let paragraphs = document.querySelector('p');
+        if (p) {
+            for (let p of paragraphs) {
+                results.push(p.textContent);
+            }
+        }
+        return results;
+    }
+}
+```
+
+
+#### Multiple Extractors
 Sometimes it is required to click buttons, wait for events to happen etc. to complete an extraction. The extractor can
-then be divided into multiple sections by providing an array of objects with one or both of `waitFor` and `extractor`. 
+then be divided into multiple sections by providing an array of objects with one or both of `waitFor` and `extract`. 
 Each extractor will get passed the return value from the previous extractor so you can add to this to get a combined result 
-(if present the `template` will be passed to the first object's extractor function).
+(if present the `template` will be passed to the first object's `extract` method).
 
 To wait for an element to appear, extract some text, 
 click next and extract some more text you could do:
@@ -160,7 +194,7 @@ extractor: [
         waitFor: async function(page) {
             await page.waitFor('.popup');
         },
-        extractor: function() {
+        extract: function() {
             let data = {
                 popupPage1: document.querySelector('.popup-text').textContent;
             }
@@ -171,7 +205,7 @@ extractor: [
             await page.click('.popup .next-button');
             await page.waitFor('.popup .page2');
         },
-        extractor: function(data) { // data is the object returned in the extractor above
+        extract: function(data) { // data is the object returned in the extractor above
             data['popupPage2'] = document.querySelector('.popup-text').textContent;
             return data;
         }
