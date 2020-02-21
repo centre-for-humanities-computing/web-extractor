@@ -21,15 +21,21 @@ async function map(srcFile, destFile, properties) {
         dest = await fs.open(destFile, 'a');
 
         let readerPromise = new Promise((function(resolve, reject) {
+            let lineCount = 1;
             lineReader.eachLine(srcFile, {encoding: 'utf8', separator: '\n'},async (line, isLast) => {
+                if (line.trim().length === 0) {
+                    return;
+                }
                 try {
                     let json = JSON.parse(line);
                     let result = extractProperties(json, properties);
                     let jsonString = JSON.stringify(result);
                     await dest.appendFile(jsonString + '\n', {encoding: 'utf8'});
                 } catch(e) {
+                    console.error('Error on line:' + lineCount);
                     console.error(e);
                 }
+                lineCount++;
 
             }, (error) => {
                 if (error) {
