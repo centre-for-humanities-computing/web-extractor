@@ -19,14 +19,7 @@ module.exports = {
     },
 
 
-    /**
-     * Wait for this method to complete before running the extractor()
-     * Can be used to wait for a specific event to occur. See the puppeteer documentation, especially
-     * https://github.com/puppeteer/puppeteer/blob/v2.0.0/docs/api.md#pagewaitforselectororfunctionortimeout-options-args
-     *
-     * @param page the puppeteer page
-     * @returns {Promise<object>}
-     */
+
     waitFor: async function(page) { // optional
         /* EXAMPLE */
         await page.waitFor('p.cmp-name', {
@@ -39,15 +32,12 @@ module.exports = {
     screenshotAfterWaitFor: false, // optional
 
     /**
-     * Executed in the context of the page.
-     * If info for the given CMP was found return an object with all the data which should be saved
-     * if the given CMP was not found return and empty object or something which evaluates to false
+     * Extract data from the given web-page and control when to extract.
      *
      * If multiple extractions separated by waitFor is required an array of objects with and extractor
      * and a waitFor can be returned. Each extractor will get passed the return value from the previous
      * extractor so it is possible keep appending to the same object. See also {@link #dataTemplate}
      *
-     * If a
      * *** Example ***
      * [
      *    {
@@ -74,20 +64,44 @@ module.exports = {
      * @see #dataTemplate
      * @returns {object}
      */
-    extractor: function(template) { // optional
-        /* EXAMPLE */
-        let cmpDesc = document.querySelector('#cmp-desc').textContent;
-        let res = {};
-        if (cmpDesc.match(/Cmp TEST/)) {
-            res = template;
-            res.descriptions = [];
-            res.html = document.innerHTML;
-            res.preselectedValues = false;
-            for (let cookieDesc of document.querySelectorAll('.jppol-cmp-purpose-description')) {
-                res.descriptions.push(cookieDesc.textContent);
+    extractor: {
+        /**
+         * Wait for this method to complete before running the extract() method
+         * Can be used to wait for a specific event to occur. See the puppeteer documentation, especially
+         * https://github.com/puppeteer/puppeteer/blob/v2.0.0/docs/api.md#pagewaitforselectororfunctionortimeout-options-args
+         *
+         * For complex rules it is possible to do selection in iteration by returning the index of the next extractor to execute.
+         * So you could e.g. say that if x is present go to extractor ant index 1 otherwise go to extractor at index 2
+         *
+         * @param page the puppeteer page
+         * @returns {Promise<object>}
+         */
+        waitFor: async function(page) { // optional
+            /* EXAMPLE */
+            await page.waitFor('p.cmp-name', {
+                timeout: 1000 // wait for maximum 1sec
+            });
+        },
+        /**
+         * Executed in the context of the page.
+         * If info for the given CMP was found return an object with all the data which should be saved
+         * if the given CMP was not found return and empty object or something which evaluates to false
+         */
+        extract: function() { // optional
+            /* EXAMPLE */
+            let cmpDesc = document.querySelector('#cmp-desc').textContent;
+            let res = {};
+            if (cmpDesc.match(/Cmp TEST/)) {
+                res = template;
+                res.descriptions = [];
+                res.html = document.innerHTML;
+                res.preselectedValues = false;
+                for (let cookieDesc of document.querySelectorAll('.jppol-cmp-purpose-description')) {
+                    res.descriptions.push(cookieDesc.textContent);
+                }
             }
+            return res;
         }
-        return res;
     }
 
 

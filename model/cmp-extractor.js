@@ -10,7 +10,9 @@ const path = require('path');
 const errors = require('./error');
 const puppeteer = require('puppeteer');
 const fkill = require('fkill');
+const FileHandleWriteLock = require('../util/file-handle-write-lock');
 const config = require('../config');
+
 
 const DEFAULT_OPTIONS = Object.freeze({
     takeScreenshot: true,
@@ -62,15 +64,15 @@ class CmpExtractor {
         }
 
         // open files
-        this._cmpDataFile = await fs.open(path.join(this._destDir, FILE_NAMES.cmpData), 'a');
-        this._cmpNotFoundUrlFile = await fs.open(path.join(this._destDir, FILE_NAMES.cmpNotFoundUrls), 'a');
-        this._errorLogFile = await fs.open(path.join(this._destDir, FILE_NAMES.errors), 'a');
+        this._cmpDataFile = await FileHandleWriteLock.open(path.join(this._destDir, FILE_NAMES.cmpData), 'a');
+        this._cmpNotFoundUrlFile = await FileHandleWriteLock.open(path.join(this._destDir, FILE_NAMES.cmpNotFoundUrls), 'a');
+        this._errorLogFile = await FileHandleWriteLock.open(path.join(this._destDir, FILE_NAMES.errors), 'a');
 
         this._emitProgression();
 
         for (let i = 0; i < this._urls.length; i++) {
-            this._queue.add(async () => {
-                await this._runAnalysis(this._urls[i]);
+            this._queue.add(() => {
+                return this._runAnalysis(this._urls[i]);
             });
 
             if (i % this._maxConcurrency === 0) {
@@ -86,9 +88,9 @@ class CmpExtractor {
         await this._queue.onIdle();
 
         //close files
-        for (let file of [this._cmpDataFile, this._cmpNotFoundUrlFile, this._errorLogFile]) {
+        for (let fileHandleWriteLock of [this._cmpDataFile, this._cmpNotFoundUrlFile, this._errorLogFile]) {
             try {
-                await file.close();
+                await fileHandleWriteLock.close();
             } catch (e) {
                 console.error('Could not close file: ', e);
             }
@@ -114,7 +116,7 @@ class CmpExtractor {
             let res = await analyzer.extractCmpData(browser, screenshotInfo);
 
             if (!PageAnalyzer.isRuleMatch(res.data)) {
-                await this._cmpNotFoundUrlFile.appendFile(url + '\n', 'utf8');
+                await this._cmpNotFoundUrlFile.write(url + '\n');
             } else {
                 let entry = {
                     time: (new Date()).toISOString(),
@@ -128,7 +130,10 @@ class CmpExtractor {
                 }
 
                 let json = JSON.stringify(entry);
-                await this._cmpDataFile.appendFile(json + '\n', 'utf8');
+
+                await this._cmpDataFile.write(json);
+                //avoid concatenating large strings
+                await this._cmpDataFile.write('\n');
             }
 
             this._progression.completed++;
@@ -150,7 +155,7 @@ class CmpExtractor {
                 error.stack = e.stack;
             }
             let json = JSON.stringify(error) + '\n';
-            await this._errorLogFile.appendFile(json, 'utf8');
+            await this._errorLogFile.write(json);
         } finally {
             this._progression.pending--;
             this._emitProgression();
