@@ -10,7 +10,7 @@ module.exports = {
 
     extractor: [
         {
-            extractor: function(template) {
+            extract: function(template) {
                 const element = document.querySelector('#qcCmpUi');
                 let intermediateData = {};
 
@@ -90,7 +90,7 @@ module.exports = {
 
 
             },
-            extractor: function(passedData) {
+            extract: function(passedData) {
                 //rejectAll on second page
                 if (passedData.template.rejectAllConsent.present === null) {
                     const rejectAllButton = document.querySelector("button[onclick='window.__cmpui(\"disableAllPurposeConsents\")']");
@@ -152,7 +152,7 @@ module.exports = {
             waitFor: async function(page) {
                 await page.waitFor('#qcCmpPartnerInfo');
             },
-            extractor: function(passedData) {
+            extract: function(passedData) {
                 //rejectAll on third page
                 if (passedData.template.rejectAllConsent.present === null) {
                     const rejectAllButton = document.querySelector("'button[onclick='window.__cmpui(\"toggleAllVendorConsents\",!1)']");
@@ -167,7 +167,7 @@ module.exports = {
                 const allVendors = document.querySelectorAll('.qc-cmp-table-row.qc-cmp-vendor-row');
                 for (const vendor of allVendors) {
                     const name = vendor.innerText;
-                    //TODO: purposeCategory is an ugly long string of smushed together purposes now.. make it an array
+                    //TODO: purposeCategory is an ugly long string of smushed together purposes now.. make it an array?
                     const purposeCategory = vendor.nextSibling.querySelector('.qc-cmp-vendor-info-list').innerText;
                     const description = vendor.nextSibling.querySelector('.qc-cmp-vendor-info-content').innerText;
                     const clicksRequiredToAccess = passedData.intermediateData.vendorPageClicks;

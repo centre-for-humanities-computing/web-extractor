@@ -4,14 +4,9 @@ module.exports = {
 
     cmpName: 'OneTrust',
 
-    dataTemplate: function() {
-        return template;
-    },
-
-
     extractor: [
         {
-            extractor: function (template) {
+            extract: function (template) {
                 let element = document.querySelector('.optanon-alert-box-wrapper');
                 if (element) {
                     //all HTML
@@ -30,36 +25,23 @@ module.exports = {
                     const onetrustGlobalObject = Optanon.GetDomainData();
                     const consentType = onetrustGlobalObject.ConsentModel.Name.toLowerCase();
 
-                    if (consentType === 'notice only' || consentType === 'opt-out') {
+                    if (consentType === 'notice only') { //"information only" in the onetrust user manual
                         template.consent.type = 'implied';
                         template.consent.impliedConsentAction.visitPage = true;
-                    } else if (consentType === 'implied consent') {
+                    } else if (consentType === 'opt-out') { //"soft opt-in" in the onetrust user manual
                         template.consent.type = 'implied';
                         template.consent.impliedConsentAction.navigatePage = true;
                         template.consent.impliedConsentAction.refreshPage = true;
-                    } else if (consentType === 'opt-in') {
+                    } else if (consentType === 'implied consent') { //"implied consent" in the onetrust user manual
+                        template.consent.type = 'implied';
+                        template.consent.impliedConsentAction.visitPage = true;
+                    } else if (consentType === 'opt-in') { //"explicit consent" in the onetrust user manual
                         template.consent.type = 'explicit';
-                    } else if (consentType === 'owner defined') {
+                    } else if (consentType === 'owner defined') { //"owner defined" in the onetrust user manual
                         template.consent.type = 'custom'
                     }
-                    //TODO incorporate:
-                    // for value in response.data['OneTrust']['categoryDefaultConsentTypes']:
-                    // if value == "Active":
-                    // consentType = 'implicit'
-                    // consentAction.append('visit')
-                    // # consentAction.remove('consent')
-                    // elif value == 'Always Active':
-                    // consentTpe = 'implicit'
-                    // consentAction.append('visit')
-                    // # consentAction.remove('consent')
-                    // elif value == 'Inactive Landing Page':
-                    // consentType = 'implicit'
-                    // consentAction.append('navigate')
-                    // consentAction.append('reload')
-                    // # consentAction.remove('consent')
-                    //
-                    //
-                    // //not sure how accurate these are
+
+                    // //TODO check how accurate these are > I don't think they are
                     template.consent.impliedConsentAction.closePopup = notUndefined(onetrustGlobalObject.CloseShouldAcceptAllCookies);
                     template.consent.impliedConsentAction.clickPage = notUndefined(onetrustGlobalObject.OnClickAcceptAllCookies);
                     template.consent.impliedConsentAction.scrollPage = notUndefined(onetrustGlobalObject.ScrollAcceptsAllCookiesAndClosesBanner);
@@ -97,12 +79,10 @@ module.exports = {
                     }
 
                     //purposes
-                    let moreDetailsPresent = true; //need this flag to determine vendor details and calculate clicks later on
                     if (    (document.querySelector(".optanon-toggle-display")
                             && document.querySelector(".optanon-toggle-display").offsetHeight !== 0)
                         || (document.querySelector('*[onclick="Optanon.TriggerGoogleAnalyticsEvent(\'OneTrust Cookie Consent\', \'Banner Open Preferences\');"]')
                             && document.querySelector('*[onclick="Optanon.TriggerGoogleAnalyticsEvent(\'OneTrust Cookie Consent\', \'Banner Open Preferences\');"]'.offsetHeight !== 0))) {
-                        moreDetailsPresent = true;
                         getPurposeDetails()
                     } else if (document.querySelector('.hide-cookie-setting-button')) {
                         template.purposeConsent = false
@@ -120,12 +100,12 @@ module.exports = {
                         for (purpose of allPurposes) {
                             let name = null;
                             let description = null;
-                            let clicksRequiredToAccess = 2;
+                            let clicksRequiredToAccess = 2; //TODO actually check which tab is selected and how many it takes to get to the first purpose consent option
                             let consentOptionDisabled = null;
                             let consentOptionDefaultStatus = null;
                             const hasConsentOption = true; //if this function is called, we know that the consent option is present
 
-                            if (purpose.Parent === null) {
+                            if (purpose.Parent === null) { //TODO perhaps redo this to scrape the actual pop-up rather than get the info from the onetrustGlobalObject
                                 name = purpose.GroupLanguagePropertiesSets[0].GroupName.Text;
                                 description = purpose.GroupLanguagePropertiesSets[0].GroupDescription.Text;
 
@@ -133,6 +113,7 @@ module.exports = {
                                 if (defaultStatusLabel == activeText) {
                                     consentOptionDefaultStatus = true;
                                     consentOptionDisabled = false;
+                                    template.consent.type = 'implied'; //if any of the
                                 } else if (defaultStatusLabel == alwaysActiveText) {
                                     consentOptionDefaultStatus = true;
                                     consentOptionDisabled = true;
@@ -162,17 +143,15 @@ module.exports = {
             }
         }, {
             waitFor: async function (page) {
-                //
-                // try {
-                //     await page.waitFor('.vendor-consent-link');
-                //     await page.click('.vendor-consent-link');
-                // } catch(error) {
-                //     return 3
-                // }
-
+                try {
+                    await page.waitFor('.vendor-consent-link');
+                    await page.click('.vendor-consent-link');
+                } catch(error) {
+                    return 2 //if the previous element can't be found and an error is caught, goto extractor on index 2 (skip the one below)
+                }
 
             },
-            extractor: function (template) {
+            extract: function (template) {
                 const allVendors = document.querySelectorAll('.vendor-item');
 
                 for (const vendor in allVendors) {
@@ -189,7 +168,8 @@ module.exports = {
                         'clicksRequiredToAccess': clicksRequiredToAccess,
                         'hasConsentOption': hasConsentOption,
                         'consentOptionDisabled': consentOptionDisabled,
-                        'consentOptionDefaultStatus': consentOptionDefaultStatus
+                        'consentOptionDefaultStatus': consentOptionDefaultStatus,
+                        'purposeCategory': null //TODO figure out whether we can get the purpose information
                     })
                 }
 
@@ -197,31 +177,15 @@ module.exports = {
 
             }
         }, {
-            waitFor: async function(page) {
-                //TODO check here if moreDetailsPresent === true
-
-            },
-            extractor: function(template) {
-
-                throw new Error('hello');
-
+            extract: function(template) {
                 const allCategories = document.querySelector("#optanon-menu").querySelectorAll("li:not(.menu-item-about):not(.menu-item-moreinfo)");
 
                 let name = null;
                 let description = null;
-                let clicksRequiredToAccess = null;
+                let clicksRequiredToAccess = 2;
                 let consentOptionDisabled = null;
                 let hasConsentOption = null;
                 let consentOptionDefaultStatus = null;
-
-                template.vendorConsent.push({
-                    'name': name,
-                    'description': description,
-                    'clicksRequiredToAccess': clicksRequiredToAccess,
-                    'hasConsentOption': hasConsentOption,
-                    'consentOptionDisabled': consentOptionDisabled,
-                    'consentOptionDefaultStatus': consentOptionDefaultStatus
-                });
 
                 //TODO make this algorithm less of a monster
                 for (const category of allCategories) {
@@ -253,11 +217,12 @@ module.exports = {
                                         'clicksRequiredToAccess': clicksRequiredToAccess,
                                         'hasConsentOption': hasConsentOption,
                                         'consentOptionDisabled': consentOptionDisabled,
-                                        'consentOptionDefaultStatus': consentOptionDefaultStatus
+                                        'consentOptionDefaultStatus': consentOptionDefaultStatus,
+                                        'purposeCategory': category.title
                                     });
                                 }
-                            } else if (cookie.className === '.optanon-subgroup-cookies-list') { //the divs that hold individual vendor names (urls, really)
-                                name = cookie.innerText;
+                            } else if (cookie.className === 'optanon-subgroup-cookies-list') { //the divs that hold individual vendor names (urls, really)
+                                name = cookie.innerText.trim();
 
                                 if (cookie.querySelector('input[type="checkbox"]')) {
                                     hasConsentOption = true;
@@ -278,7 +243,8 @@ module.exports = {
                                     'clicksRequiredToAccess': clicksRequiredToAccess,
                                     'hasConsentOption': hasConsentOption,
                                     'consentOptionDisabled': consentOptionDisabled,
-                                    'consentOptionDefaultStatus': consentOptionDefaultStatus
+                                    'consentOptionDefaultStatus': consentOptionDefaultStatus,
+                                    'purposeCategory': category.title
                                 });
                             }
                         }
@@ -290,7 +256,6 @@ module.exports = {
 
 
         }
-
 
     ],
 
