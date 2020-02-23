@@ -14,19 +14,26 @@ module.exports.getUrls = async function(file) {
 module.exports.getCmpRules = async function(dir) {
     let rules = [];
     let filenames = await fs.readdir(dir);
+    console.log(dir);
     filenames.sort();
+    let rulesIgnoredCount = 0;
 
     for (let filename of filenames) {
-        if (!filename.startsWith('__') && filename.endsWith('.js')) {
-            let rule = require(path.join(dir, filename));
-            if (rule.dataTemplate !== undefined && typeof rule.dataTemplate !== 'function') {
-                throw Error(`The dataTemplate property of a rule must be a function or undefined`);
+        if (filename.endsWith('.js')) {
+            if (!filename.startsWith('__')) {
+                let rule = require(path.join(dir, filename));
+                if (rule.dataTemplate !== undefined && typeof rule.dataTemplate !== 'function') {
+                    throw Error(`The dataTemplate property of a rule must be a function or undefined`);
+                }
+                rules.push(rule);
+            } else {
+                rulesIgnoredCount++;
             }
-            rules.push(rule);
+
         }
     }
-    if (config.debug && filenames.length !== rules.length) {
-        console.log(`Ignored ${filenames.length - rules.length} rule file(s), due to double leading underscore`);
+    if (config.debug && rulesIgnoredCount > 0) {
+        console.log(`Ignored ${rulesIgnoredCount} rule file(s), due to double leading underscore`);
     }
     return rules;
 };

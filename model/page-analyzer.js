@@ -26,29 +26,69 @@ class PageAnalyzer {
      * @returns {Promise<object>}
      */
     async extractCmpData(browser, screenshot = undefined) {
+        this._resetActionTimer();
         let result = {
             cmpName: undefined,
             data: undefined
         };
 
         let page;
-        let context;
+        let errorCaught = false;
+
         try {
-            context = await browser.createIncognitoBrowserContext();
-            page = await context.newPage();
+            this._browserContext = await browser.createIncognitoBrowserContext();
+            page = await this._browserContext.newPage();
+            this._resetActionTimer();
+
+            /*
+            * We need to handle requestfailed otherwise page.screenshot() will hang if the request failed,
+            * no errors are thrown it just hangs.
+            * */
+            page.on('requestfailed', (e) => { // see the error on the response object below
+                if (errorCaught instanceof Error) {
+                    errorCaught = e;
+                } else {
+                    errorCaught = true; // e is the request or response, probably related to a redirect
+                }
+            });
+            page.on('error', (e) => { // on page crash
+                errorCaught = e;
+            });
             await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:72.0) Gecko/20100101 Firefox/72.0');
 
             await page.setDefaultNavigationTimeout(this._pageTimeout);
+            await page.setDefaultTimeout(Math.max(this._pageTimeout, 10000)); // wait a little longer for page load etc.
 
-            let response = await page.goto(this._url);
+            let response = await page.goto(this._url, {waitUntil: ['load', 'networkidle2']});
+            this._resetActionTimer();
+
+            if (response === null) {
+                throw new Error('Response was null');
+            }
             let statusCode = response._status;
 
             if (statusCode < 200 ||statusCode > 226) {
                 throw new error.HttpError(statusCode);
+            } else if (errorCaught) {
+                if (errorCaught instanceof Error) {
+                    throw errorCaught;
+                } else {
+                    if (response._request && response._request._failureText) {
+                        let errorText = response._request._failureText;
+                        throw new Error(errorText);
+                    }
+
+                    // console.error("Unhandled error", this._url, errorCaught);
+                    // console.error("unhandled error response", this._url, response);
+                    // we could still have other errors here but these doesn't seem to
+                    //be a problem. The page is still loaded, sometimes this can be related to a page redirecting
+                    // and the error is then related to the previous page
+                }
             }
 
             if (screenshot) {
                 await page.screenshot({path: this._getScreenshotPath(screenshot.dirPath, screenshot.imageName)});
+                this._resetActionTimer();
             }
 
             for (let rule of this._cmpRules) {
@@ -72,6 +112,7 @@ class PageAnalyzer {
                     if (extractor.waitFor) {
                         try {
                             let nextExtractorIndex = await extractor.waitFor(page);
+                            this._resetActionTimer();
                             if (_.isInteger(nextExtractorIndex)) {
                                 i = nextExtractorIndex;
                                 if (config.debug) {
@@ -81,6 +122,7 @@ class PageAnalyzer {
                             }
                             if (screenshot && rule.screenshotAfterWaitFor) {
                                 await page.screenshot({path: this._getScreenshotPath(screenshot.dirPath, screenshot.imageName)});
+                                this._resetActionTimer();
                             }
                         } catch (e) {
                             if (e instanceof puppeteer.errors.TimeoutError) {
@@ -96,6 +138,7 @@ class PageAnalyzer {
 
                     if (extractor.extract) {
                         cmpData = await page.evaluate(extractor.extract, cmpData);
+                        this._resetActionTimer();
                     }
                     i++;
                 }
@@ -112,20 +155,43 @@ class PageAnalyzer {
                 if (page) {
                     await page.close();
                 }
-            } catch (e) {}
+            } catch (e) {/* no-op */}
 
-            if (context) {
-                await context.close();
-            }
+            try {
+                await this.close();
+            } catch (e) {/* no-op */}
         }
 
         return result;
     }
 
-    _getScreenshotPath(dirParh, imageName) {
+    /**
+     * Time elapsed since last activity in nanoseconds
+     * @returns {bigint}
+     */
+    timeElapsedSinceLastActivityNs() {
+        if (this._lastActivity === undefined) {
+            throw new Error("PageAnalyzer.timeElapsedSinceLastActivityNs() should only be called after a call to extractCmpData()");
+        }
+        return process.hrtime.bigint() - this._lastActivity;
+    }
+
+    _resetActionTimer() {
+        this._lastActivity = process.hrtime.bigint();
+    }
+
+    _getScreenshotPath(dirPath, imageName) {
         let imageFullName = `${imageName}_${this._screenshotCounter}.png`;
         this._screenshotCounter++;
-        return path.join(dirParh, imageFullName);
+        return path.join(dirPath, imageFullName);
+    }
+
+    async close() {
+        if (this._browserContext) {
+            let context = this._browserContext;
+            this._browserContext = null;
+            await context.close();
+        }
     }
 
     /**

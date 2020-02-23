@@ -18,14 +18,6 @@ module.exports = {
         return template;
     },
 
-
-
-    waitFor: async function(page) { // optional
-        /* EXAMPLE */
-        await page.waitFor('p.cmp-name', {
-            timeout: 1000 // wait for maximum 1sec
-        });
-    },
     /**
      * If screenshot is enabled do an additional screenshot after each waitFor has completed
      */
@@ -103,7 +95,5 @@ module.exports = {
             return res;
         }
     }
-
-
 
 };
