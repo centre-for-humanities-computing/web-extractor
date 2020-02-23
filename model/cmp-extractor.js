@@ -87,7 +87,7 @@ class CmpExtractor {
             if (analyzersSorted.length > 0) {
                 let analyzer = analyzersSorted.shift();
 
-                if (analyzer.timeElapsedSinceLastActivityNs() > this._maxConcurrency * 10 * 1000000000) { // max concurrency * 10 secs
+                if (analyzer.timeElapsedSinceLastActivityNs() > (this._maxConcurrency * 10 * 1000000000) + this._pageTimeout * 1000000) { // max concurrency * 10 secs + pageTimeout
                     try {
                         let error = createBaseError(analyzer._url);
                         error.errorType = 'forceClose';
