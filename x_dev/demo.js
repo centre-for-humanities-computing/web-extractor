@@ -2,6 +2,7 @@ const fs = require('fs').promises;
 const CmpExtractor = require('../model/cmp-extractor');
 const path = require('path');
 const fileUtil = require('../util/file-util');
+const ruleUtil = require('../util/rule-util');
 const config = require('../config');
 
 let destDir = 'd:/temp/cmp-temp';
@@ -13,7 +14,7 @@ config.debug = true;
 
 async function demo() {
 
-    let rules = await fileUtil.getCmpRules(path.join(destDir, 'rules'));
+    let rules = await ruleUtil.getCmpRules(path.join(destDir, 'rules'));
     let urls = await fileUtil.getUrls(urlsPath);
 
     if (maxConcurrency > 10) {

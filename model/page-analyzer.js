@@ -3,6 +3,7 @@ const _ = require('lodash');
 const path = require('path');
 const puppeteer = require('puppeteer');
 const config = require('../config');
+const ruleUtil = require('../util/rule-util');
 
 class PageAnalyzer {
 
@@ -97,15 +98,11 @@ class PageAnalyzer {
                     dataTemplate = _.cloneDeep(dataTemplate); //user can make changes to template, so make sure to make a new copy for every run
                 }
 
-                let extractors = null;
+                // rule-utils makes sure this is an array
+                let extractors = rule.extractor;
 
-                if (_.isArray(rule.extractor)) {
-                    extractors = _.clone(rule.extractor); // get a local copy
-                } else {
-                    extractors = [rule.extractor];
-                }
-
-                let cmpData = dataTemplate;
+                let cmpData = null;
+                let firstExtractCall = true;
 
                 for (let i = 0; i < extractors.length;) {
                     let extractor = extractors[i];
@@ -137,7 +134,18 @@ class PageAnalyzer {
                     }
 
                     if (extractor.extract) {
-                        cmpData = await page.evaluate(extractor.extract, cmpData);
+                        let  dataCollect = null;
+                        if (firstExtractCall) {
+                            dataCollect = dataTemplate;
+                            firstExtractCall = false;
+                        } else {
+                            dataCollect = cmpData;
+                        }
+                        if (extractor.mode === ruleUtil.extractorMode.DOCUMENT) {
+                            cmpData = await page.evaluate(extractor.extract, dataCollect);
+                        } else {
+                            cmpData = await extractor.extract(page, dataCollect);
+                        }
                         this._resetActionTimer();
                     }
                     i++;
