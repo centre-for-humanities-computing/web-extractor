@@ -144,7 +144,11 @@ class PageAnalyzer {
                         if (extractor.mode === ruleUtil.extractorMode.DOCUMENT) {
                             cmpData = await page.evaluate(extractor.extract, dataCollect);
                         } else {
-                            cmpData = await extractor.extract(page, dataCollect);
+                            let extractPromise = extractor.extract(page, dataCollect);
+                            if (!(extractPromise instanceof Promise)) {
+                                throw new Error(`When extractor is in ${ruleUtil.extractorMode.PUPPETEER} mode it must be async or return a Promise`);
+                            }
+                            cmpData = await extractPromise;
                         }
                         this._resetActionTimer();
                     }
