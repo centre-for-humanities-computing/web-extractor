@@ -28,11 +28,13 @@ $ node extract -h
 - **`-u, --urls <file>`** [required] - A path to a file with a list of urls for extraction. Each url in the file should be on it's own line
 - **`-d, --destination <directory>`** [required] - A path to the dir where data should be saved. If the dir already contains previous collected data the new data will be appended to the existing files
 - **`-r, --rules <directory>`** [optional] - A path to the dir where extraction rules are located. If not set the "rules" folder in project will be used as default
-- **`-c, --concurrency <integer>`** [optional, default=25] - The maximum simultaneous loaded pages
+- **`-c, --concurrency <integer>`** [optional, default=15] - The maximum simultaneous loaded pages
 - **`-n, --no-screenshot`** [optional] - Disable screenshots
-- **`-t, --page-timeout <integer>`** [optional, default=60000] - Milliseconds to wait for the initial loading of a page
+- **`-t, --page-timeout <integer>`** [optional, default=90000] - Milliseconds to wait for the initial loading of a page
 - **`-i, --use-id-for-screenshot-name`** [optional] - Use an universal unique id for screenshot names instead of the url
 - **`-x, --debug`** [optional] - Print more detailed error information
+
+If the log file contains many "Navigation timeout" errors, try lowering concurrency or increase page-timeout. 
 
 ### Full Example
 ```

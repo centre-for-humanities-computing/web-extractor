@@ -7,7 +7,7 @@ const config = require('../config');
 let destDir = 'd:/temp/cmp-temp';
 //let urlsPath = path.join(destDir, 'top10Kfor29EUcountries.txt');
 let urlsPath = path.join(destDir, 'stall-test2.txt');
-let maxConcurrency = 25;
+let maxConcurrency = 15;
 
 config.debug = true;
 
@@ -24,7 +24,7 @@ async function demo() {
         takeScreenshot: true,
         maxConcurrency: maxConcurrency,
         createNewDirForEachRun: true,
-        pageTimeoutMs: 120000
+        pageTimeoutMs: 90000
     };
 
     let cmpExtractor = new CmpExtractor(urls, rules, destDir, options);

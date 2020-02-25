@@ -18,8 +18,8 @@ const config = require('../config');
 const DEFAULT_OPTIONS = Object.freeze({
     takeScreenshot: true,
     useIdForScreenshotName: false,
-    maxConcurrency: 25,
-    pageTimeoutMs: 120000
+    maxConcurrency: 15,
+    pageTimeoutMs: 90000
 });
 
 const FILE_NAMES = Object.freeze({
@@ -109,7 +109,7 @@ class CmpExtractor {
                     } finally {
                         // reset the remaining analyzers
                         for (let analyzer of analyzersSorted) {
-                            analyzer._resetActionTimer();
+                            analyzer._resetActionTimerAndThrowIfErrorCaught();
                         }
                     }
                 }

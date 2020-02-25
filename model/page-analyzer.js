@@ -4,11 +4,13 @@ const path = require('path');
 const puppeteer = require('puppeteer');
 const config = require('../config');
 
+const PROTOCOL_REGEX = /^https?:\/\//;
+
 class PageAnalyzer {
 
     constructor(url, cmpRules, pageTimeout) {
-       if (!url.match(/^https?:\/\//)) {
-            url = 'http://' + url;
+       if (!url.match(PROTOCOL_REGEX)) {
+            url = (url.match(/^www\./) ? url : `www.${url}`);
         }
         this._url = url;
         this._cmpRules = cmpRules;
@@ -26,69 +28,49 @@ class PageAnalyzer {
      * @returns {Promise<object>}
      */
     async extractCmpData(browser, screenshot = undefined) {
-        this._resetActionTimer();
+        this._resetActionTimerAndThrowIfErrorCaught();
         let result = {
             cmpName: undefined,
             data: undefined
         };
 
         let page;
-        let errorCaught = false;
+        this._errorCaught = false;
 
         try {
             this._browserContext = await browser.createIncognitoBrowserContext();
             page = await this._browserContext.newPage();
-            this._resetActionTimer();
+            this._resetActionTimerAndThrowIfErrorCaught();
 
-            /*
-            * We need to handle requestfailed otherwise page.screenshot() will hang if the request failed,
-            * no errors are thrown it just hangs.
-            * */
-            page.on('requestfailed', (e) => { // see the error on the response object below
-                if (errorCaught instanceof Error) {
-                    errorCaught = e;
-                } else {
-                    errorCaught = true; // e is the request or response, probably related to a redirect
-                }
-            });
             page.on('error', (e) => { // on page crash
-                errorCaught = e;
+                this._errorCaught = e;
             });
+
             await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:72.0) Gecko/20100101 Firefox/72.0');
 
             await page.setDefaultNavigationTimeout(this._pageTimeout);
-            await page.setDefaultTimeout(Math.max(this._pageTimeout, 10000)); // wait a little longer for page load etc.
+            await page.setDefaultTimeout(this._pageTimeout);
 
-            let response = await page.goto(this._url, {waitUntil: ['load', 'networkidle2']});
-            this._resetActionTimer();
+            let response = await page.goto(this._getUrl('http'), {waitUntil: ['load', /*'networkidle2'*/], ignoreHTTPSErrors: true});
+            this._resetActionTimerAndThrowIfErrorCaught();
+            if (response === null && !errorCaught && this._urlHasProtocol()) { // sometimes response is null when redirected på https, try again with https if no user specified protocol
+                response = await page.goto(this._getUrl('https'), {waitUntil: ['load', /*'networkidle2'*/], ignoreHTTPSErrors: true});
+            }
+            this._resetActionTimerAndThrowIfErrorCaught();
 
             if (response === null) {
                 throw new Error('Response was null');
             }
+
             let statusCode = response._status;
 
             if (statusCode < 200 ||statusCode > 226) {
                 throw new error.HttpError(statusCode);
-            } else if (errorCaught) {
-                if (errorCaught instanceof Error) {
-                    throw errorCaught;
-                } else {
-                    if (response._request && response._request._failureText) {
-                        let errorText = response._request._failureText;
-                        throw new Error(errorText);
-                    }
-
-                    // console.error("Unhandled error", this._url, errorCaught);
-                    // console.error("unhandled error response", this._url, response);
-                    // we could still have other errors here but these doesn't seem to
-                    //be a problem. The page is still loaded, sometimes this can be related to a page redirecting
-                    // and the error is then related to the previous page
-                }
             }
 
             if (screenshot) {
                 await page.screenshot({path: this._getScreenshotPath(screenshot.dirPath, screenshot.imageName)});
-                this._resetActionTimer();
+                this._resetActionTimerAndThrowIfErrorCaught();
             }
 
             for (let rule of this._cmpRules) {
@@ -105,14 +87,15 @@ class PageAnalyzer {
                     extractors = [rule.extractor];
                 }
 
-                let cmpData = dataTemplate;
+                let cmpData = null;
+                let firstExtractCall = true;
 
                 for (let i = 0; i < extractors.length;) {
                     let extractor = extractors[i];
                     if (extractor.waitFor) {
                         try {
                             let nextExtractorIndex = await extractor.waitFor(page);
-                            this._resetActionTimer();
+                            this._resetActionTimerAndThrowIfErrorCaught();
                             if (_.isInteger(nextExtractorIndex)) {
                                 i = nextExtractorIndex;
                                 if (config.debug) {
@@ -122,7 +105,7 @@ class PageAnalyzer {
                             }
                             if (screenshot && rule.screenshotAfterWaitFor) {
                                 await page.screenshot({path: this._getScreenshotPath(screenshot.dirPath, screenshot.imageName)});
-                                this._resetActionTimer();
+                                this._resetActionTimerAndThrowIfErrorCaught();
                             }
                         } catch (e) {
                             if (e instanceof puppeteer.errors.TimeoutError) {
@@ -137,8 +120,13 @@ class PageAnalyzer {
                     }
 
                     if (extractor.extract) {
-                        cmpData = await page.evaluate(extractor.extract, cmpData);
-                        this._resetActionTimer();
+                        if (firstExtractCall) {
+                            cmpData = await page.evaluate(extractor.extract, dataTemplate);
+                            firstExtractCall = false;
+                        } else {
+                            cmpData = await page.evaluate(extractor.extract, cmpData);
+                        }
+                        this._resetActionTimerAndThrowIfErrorCaught();
                     }
                     i++;
                 }
@@ -176,14 +164,32 @@ class PageAnalyzer {
         return process.hrtime.bigint() - this._lastActivity;
     }
 
-    _resetActionTimer() {
+    _resetActionTimerAndThrowIfErrorCaught() {
         this._lastActivity = process.hrtime.bigint();
+        this._throwIfErrorCaught();
     }
 
     _getScreenshotPath(dirPath, imageName) {
         let imageFullName = `${imageName}_${this._screenshotCounter}.png`;
         this._screenshotCounter++;
         return path.join(dirPath, imageFullName);
+    }
+
+    _getUrl(defaultProtocol) {
+        if (!this._urlHasProtocol()) {
+            return `${defaultProtocol}://${this._url}`;
+        }
+        return this._url;
+    }
+
+    _urlHasProtocol() {
+        return this._url.match(PROTOCOL_REGEX);
+    }
+
+    _throwIfErrorCaught() {
+        if (this._errorCaught) {
+            throw this._errorCaught;
+        }
     }
 
     async close() {

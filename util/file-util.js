@@ -14,7 +14,6 @@ module.exports.getUrls = async function(file) {
 module.exports.getCmpRules = async function(dir) {
     let rules = [];
     let filenames = await fs.readdir(dir);
-    console.log(dir);
     filenames.sort();
     let rulesIgnoredCount = 0;
 
