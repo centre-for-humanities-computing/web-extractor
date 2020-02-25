@@ -3,6 +3,7 @@ const _ = require('lodash');
 const path = require('path');
 const puppeteer = require('puppeteer');
 const config = require('../config');
+const ruleUtil = require('../util/rule-util');
 
 const PROTOCOL_REGEX = /^https?:\/\//;
 
@@ -79,13 +80,8 @@ class PageAnalyzer {
                     dataTemplate = _.cloneDeep(dataTemplate); //user can make changes to template, so make sure to make a new copy for every run
                 }
 
-                let extractors = null;
-
-                if (_.isArray(rule.extractor)) {
-                    extractors = _.clone(rule.extractor); // get a local copy
-                } else {
-                    extractors = [rule.extractor];
-                }
+                // rule-utils makes sure this is an array
+                let extractors = rule.extractor;
 
                 let cmpData = null;
                 let firstExtractCall = true;
@@ -120,13 +116,23 @@ class PageAnalyzer {
                     }
 
                     if (extractor.extract) {
+                        let  dataCollect = null;
                         if (firstExtractCall) {
-                            cmpData = await page.evaluate(extractor.extract, dataTemplate);
+                            dataCollect = dataTemplate;
                             firstExtractCall = false;
                         } else {
-                            cmpData = await page.evaluate(extractor.extract, cmpData);
+                            dataCollect = cmpData;
                         }
-                        this._resetActionTimerAndThrowIfErrorCaught();
+                        if (extractor.mode === ruleUtil.extractorMode.DOCUMENT) {
+                            cmpData = await page.evaluate(extractor.extract, dataCollect);
+                        } else {
+                            let extractPromise = extractor.extract(page, dataCollect);
+                            if (!(extractPromise instanceof Promise)) {
+                                throw new Error(`When extractor is in ${ruleUtil.extractorMode.PUPPETEER} mode it must be async or return a Promise`);
+                            }
+                            cmpData = await extractPromise;
+                        }
+                        this._resetActionTimer();
                     }
                     i++;
                 }

@@ -2,6 +2,7 @@ const fs = require('fs').promises;
 const CmpExtractor = require('./model/cmp-extractor');
 const path = require('path');
 const fileUtil = require('./util/file-util');
+const ruleUtil = require('./util/rule-util');
 const cli = require('commander');
 const config = require('./config');
 const _ = require('lodash');
@@ -48,7 +49,7 @@ async function run() {
             rulesDir = path.join(__dirname, 'rules');
         }
 
-        let rules = await fileUtil.getCmpRules(rulesDir);
+        let rules = await ruleUtil.getCmpRules(rulesDir);
         let urls = await fileUtil.getUrls(urlsPath);
 
         if (concurrency > 10) {
