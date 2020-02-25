@@ -93,34 +93,31 @@ module.exports = {
     
 };
 ```
-##### cmpName
-Type: `string`
+##### cmpName \<string>
 
 The name of the CMP or some other name identifying the extracted data.
 
-##### screenshotAfterWaitFor
-Type: `boolean`
+##### screenshotAfterWaitFor \<boolean>
 
 Should a screenshot after each waitFor? If `false` only the initial screenshot after page load will be saved.
 
-##### dataTemplate
-Type: `function`\
-Returns: a template object to use as a starting point in the first extractor for the rule
+##### dataTemplate()
+
+Returns: `Object` - a template object to use as a starting point in the first extractor for the rule
 
 If the function is defined it must return a JSON compliant object which will be passed into the first
 extractor of the rule (see below). For each url the rule i tested against a new clone of the template
 object, so it is safe to modify the template object in the `extract` method.
 
-##### extractor
-Type: `object` | `array`
+##### extractor \<object | array>
 
 The extractor object should have one or both of the following methods:
 
-##### waitFor
+##### extractor.waitFor(page) \<async>
 
-Type: `async function`\
-Parameter: `page` - an instance of a [puppeteer page](https://github.com/puppeteer/puppeteer/blob/v2.1.0/docs/api.md#class-page)\
-Returns: the index of the next extractor to execute or `undefined` (default) if the normal order of execution should be followed
+- `page` - an instance of a [puppeteer page](https://github.com/puppeteer/puppeteer/blob/v2.1.0/docs/api.md#class-page)
+
+Returns: `Promise<integer | undefined>` - the index of the next extractor to execute or `undefined` (default) if the normal order of execution should be followed
 
 The extraction engine will wait for this method to complete before running the `extract` method.
 
@@ -155,10 +152,10 @@ extractor: {
 }
 ```
 
+##### extractor.extract([template])
 
-##### extract
-Type: `function`\
-Parameter: `template` - a clone of the template object returned by `dataTemplate()` or `null` if `dataTemplate()` is not defined\
+- `template` - a clone of the template object returned by `dataTemplate()` or `null` if `dataTemplate()` is not defined
+
 Returns: the extraction result or one of: `null`, `undefined`, `[]` or `{}` if no result was found
 
 The `extract` method is executed in the context of the page so you have access to `document`, `window` etc.
@@ -180,12 +177,37 @@ extractor: {
 }
 ```
 
+##### extractor.extractPuppeteer(page, [template]) \<async>
+
+- `page` - a puppeteer [`page`](https://github.com/puppeteer/puppeteer/blob/master/docs/api.md#class-page) instance. 
+- `template` - a clone of the template object returned by `dataTemplate()` or `null` if `dataTemplate()` is not defined
+
+Returns `Promise<?>`: the extraction result or one of: `null`, `undefined`, `[]` or `{}` if no result was found
+
+Use this method of you need to have access to the `page` object and wants to its methods for extraction.
+
+If both `extractor.extractPuppeteer` and `extractor.extract` is present `extractor.extractPuppeteer` will
+be executed first.
+
+To extract all paragraph text from a page you could do: 
+
+```
+extractor: {
+    extractPuppeteer: async function(page) {
+        let results = await page.$$('p', (elements) => elements.map((element) => element.textContent));
+        return results;
+    }
+}
+```
 
 #### Multiple Extractors
 Sometimes it is required to click buttons, wait for events to happen etc. to complete an extraction. The extractor can
 then be divided into multiple sections by providing an array of objects with one or both of `waitFor` and `extract`. 
 Each extractor will get passed the return value from the previous extractor so you can add to this to get a combined result 
 (if present the `template` will be passed to the first object's `extract` method).
+
+if an extractor return one of `null`, `undefined`, `[]` or `{}` the extraction chain will be aborted and no result will
+be saved for this rule. If there are more rules the next rule in line will be tested.
 
 To wait for an element to appear, extract some text, 
 click next and extract some more text you could do:

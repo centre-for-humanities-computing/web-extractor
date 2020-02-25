@@ -3,13 +3,6 @@ const path = require('path');
 const _ = require('lodash');
 const config = require('../config');
 
-module.exports.extractorMode = extractorMode = Object.freeze({
-    DOCUMENT: 'document',
-    PUPPETEER: 'puppeteer'
-});
-
-const EXTRACTOR_MODES = new Set[Object.values(extractorMode)];
-
 module.exports.getCmpRules = async function(dir) {
     let rules = [];
     let filenames = await fs.readdir(dir);
@@ -39,29 +32,7 @@ module.exports.getCmpRules = async function(dir) {
 };
 
 function prepareRule(rule) {
-    if (!rule.extractorMode) {
-        rule.extractorMode = 'document';
-    } else {
-        testExtractorModeAndThrow(rule.extractorMode);
-    }
-
     if (!_.isArray(rule.extractor)) {
         rule.extractor = [rule.extractor];
     }
-
-    for (let extractor of rule.extractor) {
-        if (extractor.mode) {
-            testExtractorModeAndThrow(extractor.mode);
-        } else {
-            extractor.mode = rule.extractorMode;
-        }
-    }
-
-}
-
-function testExtractorModeAndThrow(extractorMode) {
-    if (!EXTRACTOR_MODES.has(extractorMode)) {
-        throw new Error(`Unsupported extractorMode "${extractorMode}. use one of ${Object.values(extractorMode)}"`);
-    }
-    return true;
 }

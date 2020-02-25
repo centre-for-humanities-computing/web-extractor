@@ -115,7 +115,7 @@ class PageAnalyzer {
                         }
                     }
 
-                    if (extractor.extract) {
+                    if (extractor.extract || extractor.extractPuppeteer) {
                         let dataCollector = null;
                         if (firstExtractCall) {
                             dataCollector = dataTemplate;
@@ -123,16 +123,24 @@ class PageAnalyzer {
                         } else {
                             dataCollector = cmpData;
                         }
-                        if (extractor.mode === ruleUtil.extractorMode.DOCUMENT) {
-                            cmpData = await page.evaluate(extractor.extract, dataCollector);
-                        } else {
-                            let extractPromise = extractor.extract(page, dataCollector);
+
+                        if (extractor.extractPuppeteer) {
+                            let extractPromise = extractor.extractPuppeteer(page, dataCollector);
                             if (!(extractPromise instanceof Promise)) {
-                                throw new Error(`When extractor is in ${ruleUtil.extractorMode.PUPPETEER} mode it must be async or return a Promise`);
+                                throw new Error(`extractor.extractPuppeteer must be async or return a Promise`);
                             }
                             cmpData = await extractPromise;
+                            this._resetActionTimerAndThrowIfErrorCaught();
                         }
-                        this._resetActionTimerAndThrowIfErrorCaught();
+
+                        if (extractor.extract) {
+                            cmpData = await page.evaluate(extractor.extract, dataCollector);
+                            this._resetActionTimerAndThrowIfErrorCaught();
+                        }
+
+                        if (!PageAnalyzer.isRuleMatch(cmpData)) {
+                            break;
+                        }
                     }
                     i++;
                 }
