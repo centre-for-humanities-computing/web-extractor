@@ -52,10 +52,10 @@ class PageAnalyzer {
             await page.setDefaultNavigationTimeout(this._pageTimeout);
             await page.setDefaultTimeout(this._pageTimeout);
 
-            let response = await page.goto(this._getUrl('http'), {waitUntil: ['load', /*'networkidle2'*/], ignoreHTTPSErrors: true});
+            let response = await page.goto(this._getUrl('http'), {waitUntil: ['load'], ignoreHTTPSErrors: true});
             this._resetActionTimerAndThrowIfErrorCaught();
-            if (response === null && !errorCaught && this._urlHasProtocol()) { // sometimes response is null when redirected på https, try again with https if no user specified protocol
-                response = await page.goto(this._getUrl('https'), {waitUntil: ['load', /*'networkidle2'*/], ignoreHTTPSErrors: true});
+            if (response === null && !this._errorCaught && this._urlHasProtocol()) { // sometimes response is null when redirected på https, try again with https if no user specified protocol
+                response = await page.goto(this._getUrl('https'), {waitUntil: ['load'], ignoreHTTPSErrors: true});
             }
             this._resetActionTimerAndThrowIfErrorCaught();
 
@@ -116,23 +116,23 @@ class PageAnalyzer {
                     }
 
                     if (extractor.extract) {
-                        let  dataCollect = null;
+                        let dataCollector = null;
                         if (firstExtractCall) {
-                            dataCollect = dataTemplate;
+                            dataCollector = dataTemplate;
                             firstExtractCall = false;
                         } else {
-                            dataCollect = cmpData;
+                            dataCollector = cmpData;
                         }
                         if (extractor.mode === ruleUtil.extractorMode.DOCUMENT) {
-                            cmpData = await page.evaluate(extractor.extract, dataCollect);
+                            cmpData = await page.evaluate(extractor.extract, dataCollector);
                         } else {
-                            let extractPromise = extractor.extract(page, dataCollect);
+                            let extractPromise = extractor.extract(page, dataCollector);
                             if (!(extractPromise instanceof Promise)) {
                                 throw new Error(`When extractor is in ${ruleUtil.extractorMode.PUPPETEER} mode it must be async or return a Promise`);
                             }
                             cmpData = await extractPromise;
                         }
-                        this._resetActionTimer();
+                        this._resetActionTimerAndThrowIfErrorCaught();
                     }
                     i++;
                 }
