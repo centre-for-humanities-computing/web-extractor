@@ -4,26 +4,25 @@ module.exports = {
 
     cmpName: 'Crownpeak',
 
-    extractor: function(template) {
-        let res = {};
-
-        let selectors = ['#_evidon_banner', '#_evidon-banner'];
-        for (let selector of selectors) {
-            let element = document.querySelector(selector);
-            if (element) {
-                res.html = element.innerHTML;
-                break;
-            }
-        }
-        
-        return res;
-    },
-
-    waitFor: undefined,
-    screenshotAfterWaitFor: true,
-
     dataTemplate: function() {
         return template;
-    }
+    },
+
+    extractor: {
+        waitFor: async function (page) {
+            await page.waitForFunction(() => {
+                    return document.querySelectorAll('#_evidon_banner, #_evidon-banner').length
+                }, {timeout:10000}
+            );
+        },
+        extract: function(template) {
+
+            template.notificationStyle = 'test'
+
+            return template;
+        }
+    },
+
+    screenshotAfterWaitFor: true,
 
 };

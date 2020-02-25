@@ -75,19 +75,12 @@ module.exports = {
             }
         }, {
             waitFor: async function(page) {
-                // if (page.$('qc-cmp-purpose-button') && page.$('qc-cmp-purpose-button').offsetHeight !== 0) {
-                //     await page.click('#qc-cmp-purpose-button');
-                //     await page.waitFor('.qc-cmp-purposes-page-content');
-                // } else if (page.$('qc-cmp-vendor-button') && page.$('qc-cmp-vendor-button').offsetHeight !== 0) {
-                //     await page.click('#qc-cmp-vendor-button');
-                //     await page.waitFor('#qcCmpPartnerInfo');
-                // }
 
                 //TODO based on previous transition logic, might have to wait for different element here.
                 // For current testing purposes, I simply wait for purpose page to appear after clicking purposeLink
+                await page.waitFor('#qc-cmp-purpose-button');
                 await page.click('#qc-cmp-purpose-button');
                 await page.waitFor('#qcCmpPurposesContainer');
-
 
             },
             extract: function(passedData) {

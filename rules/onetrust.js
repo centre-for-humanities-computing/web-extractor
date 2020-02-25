@@ -4,11 +4,18 @@ module.exports = {
 
     cmpName: 'OneTrust',
 
+    dataTemplate: function() {
+        return template;
+    },
+
+    //TODO Bugs
+    // https://drivepedia.com/ wrongfully identified as OneTrust instead of QuantCast? how?
+    // forces.net identified as OneTrust but everything else null?
     extractor: [
         {
             extract: function (template) {
                 let element = document.querySelector('.optanon-alert-box-wrapper');
-                if (element) {
+                if (element) { //TODO sometimes element === true but the rest hasn't loaded yet (forces.net). Shouldn't it be set up to wait for all JS to finish executing?
                     //all HTML
                     template.html = element.outerHTML;
 
@@ -42,8 +49,8 @@ module.exports = {
                     }
 
                     // //TODO check how accurate these are > I don't think they are
-                    template.consent.impliedConsentAction.closePopup = notUndefined(onetrustGlobalObject.CloseShouldAcceptAllCookies);
-                    template.consent.impliedConsentAction.clickPage = notUndefined(onetrustGlobalObject.OnClickAcceptAllCookies);
+                    // template.consent.impliedConsentAction.closePopup = notUndefined(onetrustGlobalObject.CloseShouldAcceptAllCookies); //incorrect for accesso.com, aao.org, allegisgroup.com, collegeboard.org //correct for 16-25railcard.co.uk,
+                    template.consent.impliedConsentAction.clickPage = notUndefined(onetrustGlobalObject.OnClickAcceptAllCookies); // correct on driving.co.uk
                     template.consent.impliedConsentAction.scrollPage = notUndefined(onetrustGlobalObject.ScrollAcceptsAllCookiesAndClosesBanner);
 
                     function notUndefined(property) {
@@ -55,7 +62,8 @@ module.exports = {
                         }
                     }
 
-                    //accept TODO verify that this works
+                    //accept
+                    // TODO verify that this works
                     const allAcceptButtons = document.querySelectorAll('.optanon-allow-all');
                     for (const acceptButton of allAcceptButtons) {
                         if (acceptButton.style.display !== 'none' && acceptButton.offsetHeight !== 0) {
@@ -67,7 +75,6 @@ module.exports = {
 
                     //reject
                     //Onetrust does not have a reject all option, afawk
-                    template.rejectAllConsent.present = false;
 
                     //bulkDescription + bulk description HTML
                     if (document.querySelector("#alert-box-message")) {
@@ -79,10 +86,12 @@ module.exports = {
                     }
 
                     //purposes
-                    if (    (document.querySelector(".optanon-toggle-display")
+                    let moreDetailsPresent = false; //this is a flag necessary to determine whether more vendor/purpose info is present
+                    if ((document.querySelector(".optanon-toggle-display")
                             && document.querySelector(".optanon-toggle-display").offsetHeight !== 0)
                         || (document.querySelector('*[onclick="Optanon.TriggerGoogleAnalyticsEvent(\'OneTrust Cookie Consent\', \'Banner Open Preferences\');"]')
                             && document.querySelector('*[onclick="Optanon.TriggerGoogleAnalyticsEvent(\'OneTrust Cookie Consent\', \'Banner Open Preferences\');"]'.offsetHeight !== 0))) {
+                        moreDetailsPresent = true;
                         getPurposeDetails()
                     } else if (document.querySelector('.hide-cookie-setting-button')) {
                         template.purposeConsent = false
@@ -90,7 +99,7 @@ module.exports = {
 
 
                     function getPurposeDetails() {
-                        //onetrust has different kinds of labels for their purposes, which are stored in properties of the global object. We have to check these labels to know the default and enabled status of purposes
+                        //onetrust has different kinds of labels for their purposes, which are stored in properties of the global object. We have to check these labels so we can compare those and know the purpose default and enabled status
                         const activeText = onetrustGlobalObject.ActiveText;
                         const inactiveText = onetrustGlobalObject.InactiveText;
                         const alwaysActiveText = onetrustGlobalObject.AlwaysActiveText;
@@ -105,7 +114,7 @@ module.exports = {
                             let consentOptionDefaultStatus = null;
                             const hasConsentOption = true; //if this function is called, we know that the consent option is present
 
-                            if (purpose.Parent === null) { //TODO perhaps redo this to scrape the actual pop-up rather than get the info from the onetrustGlobalObject
+                            if (purpose.Parent === null) { //TODO redo this to scrape the actual pop-up rather than get the info from the onetrustGlobalObject, because now it gives me more than is actually visible! See https://20cogs.co.uk/#
                                 name = purpose.GroupLanguagePropertiesSets[0].GroupName.Text;
                                 description = purpose.GroupLanguagePropertiesSets[0].GroupDescription.Text;
 
@@ -137,64 +146,79 @@ module.exports = {
                             }
                         }
                     }
-                }
 
-                return template;
-            }
-        }, {
-            waitFor: async function (page) {
-                try {
-                    await page.waitFor('.vendor-consent-link');
-                    await page.click('.vendor-consent-link');
-                } catch(error) {
-                    return 2 //if the previous element can't be found and an error is caught, goto extractor on index 2 (skip the one below)
-                }
 
-            },
-            extract: function (template) {
-                const allVendors = document.querySelectorAll('.vendor-item');
+                    if (moreDetailsPresent) {
+                        //if the banner has a link directly to vendor info, get all the data first (e.g., https://20cogs.co.uk/)
+                        const vendorLinkFirstPage = document.querySelector('#ot-show-vendorlist-link');
+                        const vendorLinkSecondPage = document.querySelector(".vendor-consent-link");
+                        if (vendorLinkFirstPage || vendorLinkSecondPage) {
+                            // document.querySelector(".vendor-consent-link").click();
 
-                for (const vendor in allVendors) {
-                    const name = vendor.querySelector(".vendor-name").innerText;
-                    const description = vendor.querySelector(".vendor-privacy-policy").innerText;
-                    const clicksRequiredToAccess = 2;
-                    const hasConsentOption = true;
-                    const consentOptionDisabled = vendor.querySelector("input").disabled;
-                    const consentOptionDefaultStatus = vendor.querySelector("input").checked;
+                            const allVendors = document.querySelectorAll('.vendor-item');
 
-                    template.vendorConsent.push({
-                        'name': name,
-                        'description': description,
-                        'clicksRequiredToAccess': clicksRequiredToAccess,
-                        'hasConsentOption': hasConsentOption,
-                        'consentOptionDisabled': consentOptionDisabled,
-                        'consentOptionDefaultStatus': consentOptionDefaultStatus,
-                        'purposeCategory': null //TODO figure out whether we can get the purpose information
-                    })
-                }
+                            for (const vendor of allVendors) {
+                                let name = null;
+                                let vendorName = vendor.querySelector(".vendor-name").innerText;
+                                const description = vendor.querySelector(".vendor-privacy-policy").innerText;
+                                const hasConsentOption = true;
+                                let clicksRequiredToAccess = null;
+                                const consentOptionDisabled = vendor.querySelector("input").disabled;
+                                const consentOptionDefaultStatus = vendor.querySelector("input").checked;
+                                let purposeCategory = null;  //this list of vendor info does not have purpose category details, nor are they listed in the actual purpose page
+                                let expiryDate = null;
 
-                return template;
+                                if (vendorLinkFirstPage && vendorLinkFirstPage.offsetHeight !== 0) {
+                                    clicksRequiredToAccess = 1
+                                } else if (vendorLinkSecondPage && vendorLinkSecondPage.offsetHeight !== 0) {
+                                    clicksRequiredToAccess = 2
+                                }
 
-            }
-        }, {
-            extract: function(template) {
-                const allCategories = document.querySelector("#optanon-menu").querySelectorAll("li:not(.menu-item-about):not(.menu-item-moreinfo)");
+                                template.vendorConsent.push({
+                                    'name': name,
+                                    'vendor': vendorName,
+                                    'description': description,
+                                    'clicksRequiredToAccess': clicksRequiredToAccess,
+                                    'hasConsentOption': hasConsentOption,
+                                    'consentOptionDisabled': consentOptionDisabled,
+                                    'consentOptionDefaultStatus': consentOptionDefaultStatus,
+                                    'purposeCategory': purposeCategory,
+                                    'expiryDate': expiryDate
+                                })
+                            }
+                            //TODO check whether all of these pages have that back button, or whether we have to get vendor info on purpose page by accessing it in a different way (e.g., clicking 'more info' button on banner)
 
-                let name = null;
-                let description = null;
-                let clicksRequiredToAccess = 2;
-                let consentOptionDisabled = null;
-                let hasConsentOption = null;
-                let consentOptionDefaultStatus = null;
+                            //go back to purpose screen
+                            document.querySelector('.vendor-consent-back-link').click()
+                        }
 
-                //TODO make this algorithm less of a monster
-                for (const category of allCategories) {
-                    category.click(); //click on each of the categories in the 'more info' popup
-                    if (document.querySelector('.optanon-cookie-list')) { //check if there is an actual vendor list present
+                        const allCategories = document.querySelector("#optanon-menu").querySelectorAll("li:not(.menu-item-about):not(.menu-item-moreinfo)");
+
+                        for (const category of allCategories) {
+                            category.click(); //click on each of the categories in the 'more info' popup
+                            if (document.querySelector('.optanon-cookie-list')) { //check if there is a vendor list present
+                                getVendorInfo(category)
+                            }
+                        }
+
+                    }
+
+                    //TODO make this algorithm less of a monster
+                    function getVendorInfo(category) {
+                        let name = null;
+                        let vendor = null;
+                        let description = null;
+                        let clicksRequiredToAccess = 2;
+                        let consentOptionDisabled = null;
+                        let hasConsentOption = null;
+                        let consentOptionDefaultStatus = null;
+                        let purposeCategory = null;
+                        let expiryDate = null;
+
                         const allCookies = document.querySelectorAll(".optanon-group-cookies-list, .optanon-subgroup-cookies-list"); //get the different divs that hold vendor information
 
                         for (const cookie of allCookies) {
-                            if (cookie.className === 'optanon-group-cookies-list') { //the div that holds a long string with cookie names
+                            if (cookie.className.trim() === 'optanon-group-cookies-list') { //the div that holds a long string with cookie names
                                 let splitCookieArray = cookie.innerText.split(','); //separate the long string into individual cookies
                                 for (const splitCookie of splitCookieArray) {
                                     name = splitCookie.trim(); //trim the cookies of trailing whitespace
@@ -202,6 +226,42 @@ module.exports = {
                                     if (cookie.querySelector('input[type="checkbox"]')) { //if that cookie has a toggle, but afaik this does not exist for the list of cookies
                                         hasConsentOption = true;
                                         consentOptionDisabled = false;
+                                        if (cookie.querySelector('input[type="checkbox"]').parentNode.classList === 'optanon-status-on') {
+                                            consentOptionDefaultStatus = true
+                                        } else {
+                                            consentOptionDefaultStatus = false
+                                        }
+                                    } else {
+                                        hasConsentOption = false;
+                                    }
+
+                                    purposeCategory = category.title;
+
+                                    template.vendorConsent.push({
+                                        'name': name,
+                                        'vendor': vendor,
+                                        'description': description,
+                                        'clicksRequiredToAccess': clicksRequiredToAccess,
+                                        'hasConsentOption': hasConsentOption,
+                                        'consentOptionDisabled': consentOptionDisabled,
+                                        'consentOptionDefaultStatus': consentOptionDefaultStatus,
+                                        'purposeCategory': purposeCategory,
+                                        'expiryDate': expiryDate
+                                    });
+                                }
+                            } else if (cookie.className.trim() === 'optanon-subgroup-cookies-list') { //the divs that hold individual vendor names (urls, really)
+                                const vendorCookieList = cookie.querySelector('.optanon-subgroup-cookies').innerText.split(',');
+                                for (vendorCookie of vendorCookieList) {
+                                    name = vendorCookie.trim();
+                                    vendor = cookie.querySelector('.optanon-subgroup-header').innerText.split(':')[0];
+
+                                    if (cookie.querySelector('.optanon-subgroup-description')) {
+                                        description = cookie.querySelector('.optanon-subgroup-description').innerText;
+                                    }
+                                    if (cookie.querySelector('input[type="checkbox"]')) {
+                                        hasConsentOption = true;
+                                        consentOptionDisabled = false;
+
                                         if (cookie.querySelector('input[type="checkbox"]').parentNode.classList == 'optanon-status-on') {
                                             consentOptionDefaultStatus = true
                                         } else {
@@ -211,52 +271,28 @@ module.exports = {
                                         hasConsentOption = false;
                                     }
 
+                                    purposeCategory = category.title;
+
                                     template.vendorConsent.push({
                                         'name': name,
+                                        'vendor': vendor,
                                         'description': description,
                                         'clicksRequiredToAccess': clicksRequiredToAccess,
                                         'hasConsentOption': hasConsentOption,
                                         'consentOptionDisabled': consentOptionDisabled,
                                         'consentOptionDefaultStatus': consentOptionDefaultStatus,
-                                        'purposeCategory': category.title
+                                        'purposeCategory': purposeCategory,
+                                        'expiryDate': expiryDate
                                     });
                                 }
-                            } else if (cookie.className === 'optanon-subgroup-cookies-list') { //the divs that hold individual vendor names (urls, really)
-                                name = cookie.innerText.trim();
 
-                                if (cookie.querySelector('input[type="checkbox"]')) {
-                                    hasConsentOption = true;
-                                    consentOptionDisabled = false;
-
-                                    if (cookie.querySelector('input[type="checkbox"]').parentNode.classList == 'optanon-status-on') {
-                                        consentOptionDefaultStatus = true
-                                    } else {
-                                        consentOptionDefaultStatus = false
-                                    }
-                                } else {
-                                    hasConsentOption = false;
-                                }
-
-                                template.vendorConsent.push({
-                                    'name': name,
-                                    'description': description,
-                                    'clicksRequiredToAccess': clicksRequiredToAccess,
-                                    'hasConsentOption': hasConsentOption,
-                                    'consentOptionDisabled': consentOptionDisabled,
-                                    'consentOptionDefaultStatus': consentOptionDefaultStatus,
-                                    'purposeCategory': category.title
-                                });
                             }
                         }
-
                     }
+                    return template;
                 }
-                return template;
             }
-
-
         }
-
     ],
 
     screenshotAfterWaitFor: true,
