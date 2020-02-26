@@ -96,6 +96,7 @@ class PageAnalyzer {
                                 }
                                 continue;
                             }
+
                             if (screenshot && rule.screenshotAfterWaitFor) {
                                 await page.screenshot({path: this._getScreenshotPath(screenshot.dirPath, screenshot.imageName)});
                                 this._resetActionTimerAndThrowIfErrorCaught();

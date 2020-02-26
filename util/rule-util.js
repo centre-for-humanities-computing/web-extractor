@@ -6,7 +6,6 @@ const config = require('../config');
 module.exports.getCmpRules = async function(dir) {
     let rules = [];
     let filenames = await fs.readdir(dir);
-    console.log(dir);
     filenames.sort();
     let rulesIgnoredCount = 0;
 
@@ -16,6 +15,9 @@ module.exports.getCmpRules = async function(dir) {
                 let rule = require(path.join(dir, filename));
                 if (rule.dataTemplate !== undefined && typeof rule.dataTemplate !== 'function') {
                     throw Error(`The dataTemplate property of a rule must be a function or undefined`);
+                }
+                if (!rule.extractor) {
+                    throw new Error(`No extractor function or array found for: ${path.join(dir, filename)}`);
                 }
                 prepareRule(rule);
                 rules.push(rule);
@@ -28,6 +30,11 @@ module.exports.getCmpRules = async function(dir) {
     if (config.debug && rulesIgnoredCount > 0) {
         console.log(`Ignored ${rulesIgnoredCount} rule file(s), due to double leading underscore`);
     }
+
+    if (config.debug && rules.length === 0) {
+        console.log(`No rules found in ${path.resolve(dir)}`)
+    }
+
     return rules;
 };
 

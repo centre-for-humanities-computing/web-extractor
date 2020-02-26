@@ -7,14 +7,17 @@ const config = require('../config');
 
 let destDir = 'd:/temp/cmp-temp';
 //let urlsPath = path.join(destDir, 'top10Kfor29EUcountries.txt');
-let urlsPath = path.join(destDir, 'stall-test2.txt');
+//let urlsPath = path.join(destDir, 'stall-test2.txt');
+let urlsPath = path.join(__dirname, 'urls-test.txt');
 let maxConcurrency = 15;
 
 config.debug = true;
 
 async function demo() {
 
-    let rules = await ruleUtil.getCmpRules(path.join(destDir, 'rules'));
+    //let rules = await ruleUtil.getCmpRules(path.join(destDir, 'rules'));
+
+    let rules = await ruleUtil.getCmpRules(path.join(__dirname, '../rules'));
     let urls = await fileUtil.getUrls(urlsPath);
 
     if (maxConcurrency > 10) {

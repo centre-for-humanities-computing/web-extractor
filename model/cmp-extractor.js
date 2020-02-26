@@ -186,9 +186,8 @@ class CmpExtractor {
 
                 let json = JSON.stringify(entry);
 
-                await this._cmpDataFile.write(json);
-                //avoid concatenating large strings
-                await this._cmpDataFile.write('\n');
+                // make sure everything is written together to avoid race conditions
+                await this._cmpDataFile.write([json, '\n']);
             }
 
             this._progression.completed++;
