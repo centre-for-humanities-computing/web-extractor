@@ -42,4 +42,5 @@ function prepareRule(rule) {
     if (!_.isArray(rule.extractor)) {
         rule.extractor = [rule.extractor];
     }
+
 }

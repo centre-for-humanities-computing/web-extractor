@@ -25,7 +25,7 @@ class PageAnalyzer {
      *
      * @returns {Promise<object>}
      */
-    async extractCmpData(browser, screenshot = undefined) {
+    async extractCmpData(browser, screenshotOptions = undefined) {
         this._resetActionTimerAndThrowIfErrorCaught();
         let result = {
             cmpName: undefined,
@@ -66,8 +66,8 @@ class PageAnalyzer {
                 throw new error.HttpError(statusCode);
             }
 
-            if (screenshot) {
-                await page.screenshot({path: this._getScreenshotPath(screenshot.dirPath, screenshot.imageName)});
+            if (screenshotOptions) {
+                await page.screenshot({path: this._getScreenshotPath(screenshotOptions.dirPath, screenshotOptions.imageName)});
                 this._resetActionTimerAndThrowIfErrorCaught();
             }
 
@@ -87,19 +87,23 @@ class PageAnalyzer {
                     let extractor = extractors[i];
                     if (extractor.waitFor) {
                         try {
-                            let nextExtractorIndex = await extractor.waitFor(page);
+                            let waitForResponse = await extractor.waitFor(page);
+                            if (typeof waitForResponse !== 'object') {
+                                waitForResponse = {};
+                            }
                             this._resetActionTimerAndThrowIfErrorCaught();
-                            if (_.isInteger(nextExtractorIndex)) {
-                                i = nextExtractorIndex;
-                                if (config.debug) {
-                                    console.log(`Jumping to extractor at index: ${nextExtractorIndex}`);
-                                }
-                                continue;
+
+                            if (screenshotOptions && waitForResponse.screenshot) {
+                                await page.screenshot({path: this._getScreenshotPath(screenshotOptions.dirPath, screenshotOptions.imageName)});
+                                this._resetActionTimerAndThrowIfErrorCaught();
                             }
 
-                            if (screenshot && rule.screenshotAfterWaitFor) {
-                                await page.screenshot({path: this._getScreenshotPath(screenshot.dirPath, screenshot.imageName)});
-                                this._resetActionTimerAndThrowIfErrorCaught();
+                            if (_.isInteger(waitForResponse.nextExtractorIndex)) {
+                                i = waitForResponse.nextExtractorIndex;
+                                if (config.debug) {
+                                    console.log(`Jumping to extractor at index: ${i}`);
+                                }
+                                continue;
                             }
                         } catch (e) {
                             if (e instanceof puppeteer.errors.TimeoutError) {

@@ -16,7 +16,6 @@ module.exports = {
     },
 
     waitFor: undefined,
-    screenshotAfterWaitFor: true,
 
     dataTemplate: function() {
         return template;

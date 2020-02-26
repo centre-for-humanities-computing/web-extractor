@@ -65,6 +65,12 @@ self contained json-object, which makes it easy to parse large files line by lin
 If a path to a directory containing previous extracted data is passed in, Cmp-extractor will
 add to the existing files and screenshot directory instead of creating a new directory. 
 
+### Screenshots
+If screenshots are enabled (default) a screenshot will taken of every page which can be reached.
+So even if no rule does match or there are no rules at all a screenshot is still taken. 
+
+For further control each rule can specify if additional screenshots should be taken (see [extractor.waitFor](#extractorwaitforpage-async)).
+
 ## Extraction Rules
 Each rule is tested one by one in alphabetical order until a match is found. 
 In the event of a match the result is saved and any remaining rules are aborted.
@@ -82,8 +88,6 @@ structure:
 module.exports = {
     cmpName: 'name of cmp', //required
 
-    screenshotAfterWaitFor: false, // optional
-
     dataTemplate: function() {} // optional
     
     extractor: {
@@ -96,10 +100,6 @@ module.exports = {
 ##### cmpName \<string>
 
 The name of the CMP or some other name identifying the extracted data.
-
-##### screenshotAfterWaitFor \<boolean>
-
-Should a screenshot after each waitFor? If `false` only the initial screenshot after page load will be saved.
 
 ##### dataTemplate()
 
@@ -117,27 +117,41 @@ The extractor object should have one or both of the following methods:
 
 - `page` - an instance of a [puppeteer page](https://github.com/puppeteer/puppeteer/blob/v2.1.0/docs/api.md#class-page)
 
-Returns: `Promise<integer | undefined>` - the index of the next extractor to execute or `undefined` (default) if the normal order of execution should be followed
+Returns: `Promise<object | undefined>` - a control object for what to do when waitFor succeeds or `undefined` (default) if the normal order of execution should be followed
+
+The returned object can have the following options:
+- `screenshot` - take a screenshot
+- `nextExctractorIndex` - continue with the extractor at the following index. Makes selection and iteration possible
+
+```
+{
+    screenshot: {boolean}, // optional
+    nextExctractorIndex: {integer} // optional
+}
+```
 
 The extraction engine will wait for this method to complete before running the `extract` method.
 
 In the case of a `puppeteer.errors.TimeoutError` the next rule (if present) wil we tested. 
 All other errors will be seen as an actual error and the following rules will be aborted and the error logged.
 
-To wait for a given DOM-element to become present you could do:
+To wait for a given DOM-element to become present and then take a screenshot you could do:
 
 ```
 extractor: { 
     waitFor: async function(page) {
         await page.waitFor('#my-element' {timeout: 5000});
+        return {
+            screenshot: true
+        };
     },
     extract() {...}
 }
 ```
 
 When the `extractor` is made up of more extractors (see [Multiple Extractors](#multiple-extractors)) it can be desirable to be able to choose which
-extractor to run next depending on a condition in `waitFor`. This can be controlled by returning the index of 
-the next extractor to run. E.g.
+extractor to run next depending on a condition in `waitFor`. This can be controlled by returning an object with the 
+property `nextExctractorIndex` which determines the next extractor to run. E.g.
 
 ```
 extractor: {

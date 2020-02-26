@@ -37,11 +37,12 @@ class FileHandleWriteLock {
         let result = null;
         try {
             await this._lock.acquireAsync();
-            if (!Array.isArray(data)) {
-                data = [data];
-            }
-            for (let str of data) {
-                await this._fileHandle.write(str);
+            if (Array.isArray(data)) {
+                for (let str of data) {
+                    await this._fileHandle.write(str);
+                }
+            } else {
+                await this._fileHandle.write(data);
             }
         } finally {
             this._lock.release();
