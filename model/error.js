@@ -13,6 +13,21 @@ class HttpError extends Error {
 
 }
 
+class NullError extends Error {
+
+    constructor(...params) {
+        super(...params);
+
+        this.name = 'NullError';
+
+        if (Error.captureStackTrace) {
+            Error.captureStackTrace(this, NullError);
+        }
+    }
+
+}
+
 module.exports = {
-    HttpError: HttpError
+    HttpError: HttpError,
+    NullError: NullError
 };
