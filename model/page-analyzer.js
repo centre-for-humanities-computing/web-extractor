@@ -10,9 +10,6 @@ const PROTOCOL_REGEX = /^https?:\/\//;
 class PageAnalyzer {
 
     constructor(url, cmpRules, pageTimeout) {
-       if (!url.match(PROTOCOL_REGEX)) {
-            url = (url.match(/^www\./) ? url : `www.${url}`);
-        }
         this._url = url;
         this._cmpRules = cmpRules;
         this._pageTimeout = pageTimeout;
@@ -138,7 +135,7 @@ class PageAnalyzer {
                             this._resetActionTimerAndThrowIfErrorCaught();
                         }
 
-                        if (!PageAnalyzer.isRuleMatch(cmpData)) {
+                        if (!PageAnalyzer.isRuleMatch(cmpData)) { // break the extractor chain if returned data doesn't match, and go to next rule
                             break;
                         }
                     }
