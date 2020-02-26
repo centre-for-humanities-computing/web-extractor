@@ -7,7 +7,7 @@ module.exports = {
     dataTemplate: function() {
         return template;
     },
-
+    //TODO talk to Peter about why it still happens that, when waitFor returns nothing (timeout) it still pushes it to the cookieinformation template object and does not go on to the next rule..
     extractor: [{
         waitFor: async function (page) {
             await page.waitForFunction(() => {
