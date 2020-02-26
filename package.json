@@ -10,14 +10,15 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "await-lock": "^2.0.1",
     "commander": "^4.1.1",
     "filenamify-url": "^2.1.1",
     "fkill": "^6.2.0",
+    "line-reader": "latest",
     "lodash": "^4.17.15",
     "p-queue": "^6.3.0",
     "puppeteer": "^2.1.1",
     "single-line-log": "^1.1.2",
-    "uniqid": "^5.2.0",
-    "line-reader": "latest"
+    "uniqid": "^5.2.0"
   }
 }

@@ -3,13 +3,13 @@ const _ = require('lodash');
 const path = require('path');
 const puppeteer = require('puppeteer');
 const config = require('../config');
+const ruleUtil = require('../util/rule-util');
+
+const PROTOCOL_REGEX = /^https?:\/\//;
 
 class PageAnalyzer {
 
     constructor(url, cmpRules, pageTimeout) {
-       if (!url.match(/^https?:\/\//)) {
-            url = 'http://' + url;
-        }
         this._url = url;
         this._cmpRules = cmpRules;
         this._pageTimeout = pageTimeout;
@@ -26,21 +26,40 @@ class PageAnalyzer {
      * @returns {Promise<object>}
      */
     async extractCmpData(browser, screenshot = undefined) {
+        this._resetActionTimerAndThrowIfErrorCaught();
         let result = {
             cmpName: undefined,
             data: undefined
         };
 
         let page;
-        let context;
+        this._errorCaught = false;
+
         try {
-            context = await browser.createIncognitoBrowserContext();
-            page = await context.newPage();
+            this._browserContext = await browser.createIncognitoBrowserContext();
+            page = await this._browserContext.newPage();
+            this._resetActionTimerAndThrowIfErrorCaught();
+
+            page.on('error', (e) => { // on page crash
+                this._errorCaught = e;
+            });
+
             await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:72.0) Gecko/20100101 Firefox/72.0');
 
             await page.setDefaultNavigationTimeout(this._pageTimeout);
+            await page.setDefaultTimeout(this._pageTimeout);
 
-            let response = await page.goto(this._url);
+            let response = await page.goto(this._getUrl('http'), {waitUntil: ['load'], ignoreHTTPSErrors: true});
+            this._resetActionTimerAndThrowIfErrorCaught();
+            if (response === null && !this._errorCaught && this._urlHasProtocol()) { // sometimes response is null when redirected på https, try again with https if no user specified protocol
+                response = await page.goto(this._getUrl('https'), {waitUntil: ['load'], ignoreHTTPSErrors: true});
+            }
+            this._resetActionTimerAndThrowIfErrorCaught();
+
+            if (response === null) {
+                throw new Error('Response was null');
+            }
+
             let statusCode = response._status;
 
             if (statusCode < 200 ||statusCode > 226) {
@@ -49,6 +68,7 @@ class PageAnalyzer {
 
             if (screenshot) {
                 await page.screenshot({path: this._getScreenshotPath(screenshot.dirPath, screenshot.imageName)});
+                this._resetActionTimerAndThrowIfErrorCaught();
             }
 
             for (let rule of this._cmpRules) {
@@ -57,21 +77,18 @@ class PageAnalyzer {
                     dataTemplate = _.cloneDeep(dataTemplate); //user can make changes to template, so make sure to make a new copy for every run
                 }
 
-                let extractors = null;
+                // rule-utils makes sure this is an array
+                let extractors = rule.extractor;
 
-                if (_.isArray(rule.extractor)) {
-                    extractors = _.clone(rule.extractor); // get a local copy
-                } else {
-                    extractors = [rule.extractor];
-                }
-
-                let cmpData = dataTemplate;
+                let cmpData = null;
+                let firstExtractCall = true;
 
                 for (let i = 0; i < extractors.length;) {
                     let extractor = extractors[i];
                     if (extractor.waitFor) {
                         try {
                             let nextExtractorIndex = await extractor.waitFor(page);
+                            this._resetActionTimerAndThrowIfErrorCaught();
                             if (_.isInteger(nextExtractorIndex)) {
                                 i = nextExtractorIndex;
                                 if (config.debug) {
@@ -81,6 +98,7 @@ class PageAnalyzer {
                             }
                             if (screenshot && rule.screenshotAfterWaitFor) {
                                 await page.screenshot({path: this._getScreenshotPath(screenshot.dirPath, screenshot.imageName)});
+                                this._resetActionTimerAndThrowIfErrorCaught();
                             }
                         } catch (e) {
                             if (e instanceof puppeteer.errors.TimeoutError) {
@@ -94,8 +112,32 @@ class PageAnalyzer {
                         }
                     }
 
-                    if (extractor.extract) {
-                        cmpData = await page.evaluate(extractor.extract, cmpData);
+                    if (extractor.extract || extractor.extractPuppeteer) {
+                        let dataCollector = null;
+                        if (firstExtractCall) {
+                            dataCollector = dataTemplate;
+                            firstExtractCall = false;
+                        } else {
+                            dataCollector = cmpData;
+                        }
+
+                        if (extractor.extractPuppeteer) {
+                            let extractPromise = extractor.extractPuppeteer(page, dataCollector);
+                            if (!(extractPromise instanceof Promise)) {
+                                throw new Error(`extractor.extractPuppeteer must be async or return a Promise`);
+                            }
+                            cmpData = await extractPromise;
+                            this._resetActionTimerAndThrowIfErrorCaught();
+                        }
+
+                        if (extractor.extract) {
+                            cmpData = await page.evaluate(extractor.extract, dataCollector);
+                            this._resetActionTimerAndThrowIfErrorCaught();
+                        }
+
+                        if (!PageAnalyzer.isRuleMatch(cmpData)) { // break the extractor chain if returned data doesn't match, and go to next rule
+                            break;
+                        }
                     }
                     i++;
                 }
@@ -112,20 +154,61 @@ class PageAnalyzer {
                 if (page) {
                     await page.close();
                 }
-            } catch (e) {}
+            } catch (e) {/* no-op */}
 
-            if (context) {
-                await context.close();
-            }
+            try {
+                await this.close();
+            } catch (e) {/* no-op */}
         }
 
         return result;
     }
 
-    _getScreenshotPath(dirParh, imageName) {
+    /**
+     * Time elapsed since last activity in nanoseconds
+     * @returns {bigint}
+     */
+    timeElapsedSinceLastActivityNs() {
+        if (this._lastActivity === undefined) {
+            throw new Error("PageAnalyzer.timeElapsedSinceLastActivityNs() should only be called after a call to extractCmpData()");
+        }
+        return process.hrtime.bigint() - this._lastActivity;
+    }
+
+    _resetActionTimerAndThrowIfErrorCaught() {
+        this._lastActivity = process.hrtime.bigint();
+        this._throwIfErrorCaught();
+    }
+
+    _getScreenshotPath(dirPath, imageName) {
         let imageFullName = `${imageName}_${this._screenshotCounter}.png`;
         this._screenshotCounter++;
-        return path.join(dirParh, imageFullName);
+        return path.join(dirPath, imageFullName);
+    }
+
+    _getUrl(defaultProtocol) {
+        if (!this._urlHasProtocol()) {
+            return `${defaultProtocol}://${this._url}`;
+        }
+        return this._url;
+    }
+
+    _urlHasProtocol() {
+        return this._url.match(PROTOCOL_REGEX);
+    }
+
+    _throwIfErrorCaught() {
+        if (this._errorCaught) {
+            throw this._errorCaught;
+        }
+    }
+
+    async close() {
+        if (this._browserContext) {
+            let context = this._browserContext;
+            this._browserContext = null;
+            await context.close();
+        }
     }
 
     /**

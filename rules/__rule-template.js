@@ -18,14 +18,6 @@ module.exports = {
         return template;
     },
 
-
-
-    waitFor: async function(page) { // optional
-        /* EXAMPLE */
-        await page.waitFor('p.cmp-name', {
-            timeout: 1000 // wait for maximum 1sec
-        });
-    },
     /**
      * If screenshot is enabled do an additional screenshot after each waitFor has completed
      */
@@ -85,7 +77,7 @@ module.exports = {
         /**
          * Executed in the context of the page.
          * If info for the given CMP was found return an object with all the data which should be saved
-         * if the given CMP was not found return and empty object or something which evaluates to false
+         * if the given CMP was not found return an empty object, null, undefined or []
          */
         extract: function() { // optional
             /* EXAMPLE */
@@ -101,9 +93,21 @@ module.exports = {
                 }
             }
             return res;
+        },
+        /**
+         * Extract with the puppeteer page object. MUST be async or return a Promise
+         * If info for the given CMP was found return an object with all the data which should be saved
+         * if the given CMP was not found return an empty object, null, undefined or []
+         */
+        extractPuppeteer: async function(page) {
+            /* EXAMPLE */
+            await page.waitFor('p.cmp-name', {
+                timeout: 1000 // wait for maximum 1sec
+            });
+            let results = await page.$$('p', (elements) => elements.map((element) => element.textContent));
+            return results;
         }
+
     }
-
-
 
 };

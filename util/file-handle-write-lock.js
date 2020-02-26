@@ -1,5 +1,5 @@
 const fs = require('fs').promises;
-
+const AwaitLock = require('await-lock').default;
 
 /**
  * Using fs.promises.FileHandle's write method
@@ -16,7 +16,7 @@ const fs = require('fs').promises;
 class FileHandleWriteLock {
     constructor(fileHandle) {
         this._fileHandle = fileHandle;
-        this._activePromise = null;
+        this._lock = new AwaitLock();
     }
 
     /**
@@ -28,49 +28,19 @@ class FileHandleWriteLock {
     }
 
     /**
-     * Resolves when the underlying FileHandle is idle
-     * @returns {Promise<void>}
-     */
-    async onIdle(action) {
-        while (this._activePromise !== null) {
-            try {
-                await this._activePromise;
-            } catch(e) {
-                // no-op
-            }
-        }
-        if (action) {
-            action();
-        }
-    }
-
-    /**
      * This method can safely be called from multiple async functions and will first write
      * the passed in data when the underlying FileHandle is idle
      * @param data the data to write
      * @returns {Promise<void>}
      */
     async write(data) {
-        /*Async functions are invoked in the current tick but does first resolve after the next tick queue
-        ( https://blog.insiderattack.net/promises-next-ticks-and-immediates-nodejs-event-loop-part-3-9226cbe7a6aa).
-        So to make any following calls to await this.onIdle() in the current tick see that there is set an
-        _activePromise we need to set it in the current tick inside onIdle. Otherwise
-
-        for (let i = 0; i < 10; i++) {
-            lock.write(i);
+        let result = null;
+        try {
+            await this._lock.acquireAsync();
+            await this._fileHandle.write(data);
+        } finally {
+            this._lock.release();
         }
-
-        would not work as all calls to write are in the current tick (because we are missing the await in front of lock.write()).
-
-        If await was used which would make each call to write in its own tick we could just have set _activePromise
-        in this method method after the await this.onIdle() call, but that wouldn't be flexible enough.
-        */
-        await this.onIdle(() => {
-            this._activePromise = this._fileHandle.write(data);
-        });
-        let result = await this._activePromise;
-        this._activePromise = null;
-        return result;
     }
 
     /**
@@ -78,8 +48,13 @@ class FileHandleWriteLock {
      * @returns {Promise<void>}
      */
     async close() {
-        await this.onIdle();
-        await this._fileHandle.close();
+        try {
+            await this._lock.acquireAsync();
+            await this._fileHandle.close();
+        } finally {
+            this._lock.release();
+        }
+
     }
 
     /**

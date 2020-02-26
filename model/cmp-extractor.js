@@ -10,6 +10,7 @@ const path = require('path');
 const errors = require('./error');
 const puppeteer = require('puppeteer');
 const fkill = require('fkill');
+const AwaitLock = require('await-lock').default;
 const FileHandleWriteLock = require('../util/file-handle-write-lock');
 const config = require('../config');
 
@@ -17,8 +18,8 @@ const config = require('../config');
 const DEFAULT_OPTIONS = Object.freeze({
     takeScreenshot: true,
     useIdForScreenshotName: false,
-    maxConcurrency: 25,
-    pageTimeoutMs: 60000
+    maxConcurrency: 15,
+    pageTimeoutMs: 90000
 });
 
 const FILE_NAMES = Object.freeze({
@@ -26,6 +27,16 @@ const FILE_NAMES = Object.freeze({
     cmpNotFoundUrls: 'cmp-not-found-urls.txt',
     errors: 'errors.json'
 });
+
+const bigIntDescComparator = (a, b) => {
+    let res = b.timeElapsedSinceLastActivityNs() - a.timeElapsedSinceLastActivityNs();
+    if (res > 0) {
+        return 1;
+    } else if (res < 0) {
+        return -1;
+    }
+    return 0;
+};
 
 class CmpExtractor {
 
@@ -45,6 +56,9 @@ class CmpExtractor {
         this._pageTimeout = options.pageTimeoutMs;
         this._queue = new PQueue({concurrency: this._maxConcurrency});
         this._eventEmitter = new EventEmitter();
+        this._closeLock = new AwaitLock();
+        this._browserInstanceLock = new AwaitLock();
+        this._activePageAnalyzers = new Set();
         this._progression = {total: urls.length, completed: 0, failed: 0, pending: urls.length};
     }
 
@@ -68,11 +82,46 @@ class CmpExtractor {
         this._cmpNotFoundUrlFile = await FileHandleWriteLock.open(path.join(this._destDir, FILE_NAMES.cmpNotFoundUrls), 'a');
         this._errorLogFile = await FileHandleWriteLock.open(path.join(this._destDir, FILE_NAMES.errors), 'a');
 
+        let closeTimer = setInterval(async () => {
+            let analyzersSorted = Array.from(this._activePageAnalyzers).sort(bigIntDescComparator);
+            if (analyzersSorted.length > 0) {
+                let analyzer = analyzersSorted.shift();
+
+                if (analyzer.timeElapsedSinceLastActivityNs() > (this._maxConcurrency * 10 * 1000000000) + this._pageTimeout * 1000000) { // max concurrency * 10 secs + pageTimeout
+                    try {
+                        let error = createBaseError(analyzer._url);
+                        error.errorType = 'forceClose';
+                        error.error = `The analyzer for ${analyzer._url} has been inactive for ${analyzer.timeElapsedSinceLastActivityNs() / 1000000n}ms`;
+                        let json = JSON.stringify(error) + '\n';
+                        await this._errorLogFile.write(json);
+
+                        try {
+                            /*
+                            * make the hanging promise throw and error in PageAnalyzer.
+                            * Sometimes a faulty page makes pupeteer page.screenshot() and page.evaluate() hang forever
+                            * */
+                            await analyzer.close();
+                        } catch(e) {
+                            //no-op
+                        }
+                    } catch (e) {
+                        console.error(e); // should never happen
+                    } finally {
+                        // reset the remaining analyzers
+                        for (let analyzer of analyzersSorted) {
+                            analyzer._resetActionTimerAndThrowIfErrorCaught();
+                        }
+                    }
+                }
+            }
+        }, 10000); // every 10 seconds
+
         this._emitProgression();
 
         for (let i = 0; i < this._urls.length; i++) {
+            let url = this._urls[i];
             this._queue.add(() => {
-                return this._runAnalysis(this._urls[i]);
+                return this._runAnalysis(url);
             });
 
             if (i % this._maxConcurrency === 0) {
@@ -92,16 +141,22 @@ class CmpExtractor {
             try {
                 await fileHandleWriteLock.close();
             } catch (e) {
-                console.error('Could not close file: ', e);
+                if (config.debug) {
+                    console.error('Could not close file: ', e);
+                }
             }
         }
 
         await this._close();
+        clearInterval(closeTimer);
     }
 
     async _runAnalysis(url) {
+        let analyzer = null;
         try {
-            let analyzer = new PageAnalyzer(url, this._cmpRules, this._pageTimeout);
+            analyzer = new PageAnalyzer(url, this._cmpRules, this._pageTimeout);
+            this._activePageAnalyzers.add(analyzer);
+
             let id = uniqid();
 
             let screenshotInfo = undefined;
@@ -142,10 +197,9 @@ class CmpExtractor {
             if (config.debug) {
                 console.error(e);
             }
-            let error = {
-                timestamp: (new Date()).toISOString(),
-                url: url
-            };
+
+            let error = createBaseError(url);
+
             if (e instanceof errors.HttpError) {
                 error.errorType = 'http';
                 error.error = e.statusCode;
@@ -159,6 +213,7 @@ class CmpExtractor {
         } finally {
             this._progression.pending--;
             this._emitProgression();
+            this._activePageAnalyzers.delete(analyzer);
         }
     }
 
@@ -172,33 +227,54 @@ class CmpExtractor {
     }
 
     async _close() {
-        if (!this._browser) {
-            return;
+        try {
+            await this._closeLock.acquireAsync();  // we are accessing shared properties are doing async work and can be accessed by multiple async functions
+            this._browserCloseRequired = false;
+            if (!this._browser) {
+                return;
+            }
+            let browser = this._browser;
+            let pid = browser.process().pid;
+            await browser.close();
+            this._browser = null;
+            await fkill(pid, {
+                force: true,
+                tree: true,
+                silent: true
+            });
+        } finally {
+            this._closeLock.release();
         }
-
-        let browser = await this._browserInstance();
-        let pid = browser.process().pid;
-        await browser.close();
-        await fkill(pid, {
-            force: true,
-            tree: true,
-            silent: true
-        });
     }
 
     async _browserInstance() {
-        if (!this._browser) {
-            this._browser = await puppeteer.launch({headless: true, defaultViewport: {width: 1024, height: 1024},
-                args: []});
-            this._browser.on('disconnected', () => this._browser = null);
+        try {
+            await this._browserInstanceLock.acquireAsync(); // we are accessing shared properties are doing async work and can be accessed by multiple async functions
+            if (this._browserCloseRequired) {
+                await this._close();
+            }
+            if (!this._browser) {
+                this._browser = await puppeteer.launch({headless: true, defaultViewport: {width: 1024, height: 1024},
+                    args: []});
+                this._browser.once('disconnected', () => this._browserCloseRequired = true);
+            }
+            return this._browser;
+        } finally {
+            this._browserInstanceLock.release();
         }
-        return this._browser;
     }
 
     _isExistingCmpDataDir(dirPath) {
         return fsStandard.existsSync(dirPath) && fsStandard.existsSync(path.join(dirPath, FILE_NAMES.cmpData));
     }
 
+}
+
+function createBaseError(url) {
+   return {
+        timestamp: (new Date()).toISOString(),
+        url: url
+    };
 }
 
 function getDateTimeDirString() {

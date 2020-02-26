@@ -10,23 +10,3 @@ module.exports.getUrls = async function(file) {
         .filter((line) => line.length > 0 && line[0] != '#');
     return urls;
 };
-
-module.exports.getCmpRules = async function(dir) {
-    let rules = [];
-    let filenames = await fs.readdir(dir);
-    filenames.sort();
-
-    for (let filename of filenames) {
-        if (!filename.startsWith('__') && filename.endsWith('.js')) {
-            let rule = require(path.join(dir, filename));
-            if (rule.dataTemplate !== undefined && typeof rule.dataTemplate !== 'function') {
-                throw Error(`The dataTemplate property of a rule must be a function or undefined`);
-            }
-            rules.push(rule);
-        }
-    }
-    if (config.debug && filenames.length !== rules.length) {
-        console.log(`Ignored ${filenames.length - rules.length} rule file(s), due to double leading underscore`);
-    }
-    return rules;
-};

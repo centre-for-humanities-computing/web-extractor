@@ -2,17 +2,19 @@ const fs = require('fs').promises;
 const CmpExtractor = require('../model/cmp-extractor');
 const path = require('path');
 const fileUtil = require('../util/file-util');
+const ruleUtil = require('../util/rule-util');
 const config = require('../config');
 
-let urlsPath = path.join(__dirname, 'urls-test.txt');
-let destDir = 'd:/temp/gdpr-scrape';
-let maxConcurrency = 25;
+let destDir = 'd:/temp/cmp-temp';
+//let urlsPath = path.join(destDir, 'top10Kfor29EUcountries.txt');
+let urlsPath = path.join(destDir, 'stall-test2.txt');
+let maxConcurrency = 15;
 
 config.debug = true;
 
 async function demo() {
 
-    let rules = await fileUtil.getCmpRules(path.join(__dirname, '../rules'));
+    let rules = await ruleUtil.getCmpRules(path.join(destDir, 'rules'));
     let urls = await fileUtil.getUrls(urlsPath);
 
     if (maxConcurrency > 10) {
@@ -23,7 +25,7 @@ async function demo() {
         takeScreenshot: true,
         maxConcurrency: maxConcurrency,
         createNewDirForEachRun: true,
-        pageTimeoutMs: 60000
+        pageTimeoutMs: 90000
     };
 
     let cmpExtractor = new CmpExtractor(urls, rules, destDir, options);
