@@ -6,6 +6,29 @@ const config = require('../config');
 const ruleUtil = require('../util/rule-util');
 
 const PROTOCOL_REGEX = /^https?:\/\//;
+const CHROME_ARGS = ['--ignore-certificate-errors']; // still doesn't seem to work in headless mode and neither does ignoreHTTPSErrors below
+
+const requestStrategies = [
+    { // default request
+        fetch: async function(page, url) {
+            return await page.goto(getUrl(url, 'http'), {waitUntil: ['load'], ignoreHTTPSErrors: true, args: CHROME_ARGS});
+        },
+        canSolveError: function(error, url) {
+            return false;
+        }
+    },
+    /* //TODO, test if this makes a difference when we already have ignoreHTTPSErrors: true
+    { // sometimes response is null when redirected to https, try again with https if no user specified protocol
+        fetch: async function(page, url) {
+            return await page.goto(getUrl(url,'https'), {waitUntil: ['load'], ignoreHTTPSErrors: true, args: CHROME_ARGS});
+        },
+        canSolveError: function (error, url) {
+            return (error instanceof error.NullError) && !urlHasProtocol(url);
+        }
+    }*/
+
+];
+
 
 class PageAnalyzer {
 
@@ -25,7 +48,7 @@ class PageAnalyzer {
      *
      * @returns {Promise<object>}
      */
-    async extractCmpData(browser, screenshot = undefined) {
+    async extractCmpData(browser, screenshotOptions = undefined) {
         this._resetActionTimerAndThrowIfErrorCaught();
         let result = {
             cmpName: undefined,
@@ -49,25 +72,36 @@ class PageAnalyzer {
             await page.setDefaultNavigationTimeout(this._pageTimeout);
             await page.setDefaultTimeout(this._pageTimeout);
 
-            let response = await page.goto(this._getUrl('http'), {waitUntil: ['load'], ignoreHTTPSErrors: true});
-            this._resetActionTimerAndThrowIfErrorCaught();
-            if (response === null && !this._errorCaught && this._urlHasProtocol()) { // sometimes response is null when redirected på https, try again with https if no user specified protocol
-                response = await page.goto(this._getUrl('https'), {waitUntil: ['load'], ignoreHTTPSErrors: true});
-            }
-            this._resetActionTimerAndThrowIfErrorCaught();
+            let response = null;
 
-            if (response === null) {
-                throw new Error('Response was null');
+            for (let i = 0; i < requestStrategies.length; i++) {
+                let strategy = requestStrategies[i];
+                try {
+                    response = await strategy.fetch(page, this._url);
+                    if (response === null) {
+                        throw new error.NullError("Response was null");
+                    }
+                } catch (e) {
+                    let nextIndex = nextRequestStrategyIndexForError(i, e, this._url);
+                    if (nextIndex < 0) {
+                        throw e;
+                    } else {
+                        i = nextIndex;
+                    }
+                } finally {
+                    this._resetActionTimerAndThrowIfErrorCaught();
+                }
+
             }
 
-            let statusCode = response._status;
+            let statusCode = response.status();
 
             if (statusCode < 200 ||statusCode > 226) {
                 throw new error.HttpError(statusCode);
             }
 
-            if (screenshot) {
-                await page.screenshot({path: this._getScreenshotPath(screenshot.dirPath, screenshot.imageName)});
+            if (screenshotOptions) {
+                await page.screenshot({path: this._getScreenshotPath(screenshotOptions.dirPath, screenshotOptions.imageName)});
                 this._resetActionTimerAndThrowIfErrorCaught();
             }
 
@@ -87,18 +121,23 @@ class PageAnalyzer {
                     let extractor = extractors[i];
                     if (extractor.waitFor) {
                         try {
-                            let nextExtractorIndex = await extractor.waitFor(page);
+                            let waitForResponse = await extractor.waitFor(page);
+                            if (typeof waitForResponse !== 'object') {
+                                waitForResponse = {};
+                            }
                             this._resetActionTimerAndThrowIfErrorCaught();
-                            if (_.isInteger(nextExtractorIndex)) {
-                                i = nextExtractorIndex;
+
+                            if (screenshotOptions && waitForResponse.screenshot) {
+                                await page.screenshot({path: this._getScreenshotPath(screenshotOptions.dirPath, screenshotOptions.imageName)});
+                                this._resetActionTimerAndThrowIfErrorCaught();
+                            }
+
+                            if (_.isInteger(waitForResponse.nextExtractorIndex)) {
+                                i = waitForResponse.nextExtractorIndex;
                                 if (config.debug) {
-                                    console.log(`Jumping to extractor at index: ${nextExtractorIndex}`);
+                                    console.log(`Jumping to extractor at index: ${i}`);
                                 }
                                 continue;
-                            }
-                            if (screenshot && rule.screenshotAfterWaitFor) {
-                                await page.screenshot({path: this._getScreenshotPath(screenshot.dirPath, screenshot.imageName)});
-                                this._resetActionTimerAndThrowIfErrorCaught();
                             }
                         } catch (e) {
                             if (e instanceof puppeteer.errors.TimeoutError) {
@@ -186,17 +225,6 @@ class PageAnalyzer {
         return path.join(dirPath, imageFullName);
     }
 
-    _getUrl(defaultProtocol) {
-        if (!this._urlHasProtocol()) {
-            return `${defaultProtocol}://${this._url}`;
-        }
-        return this._url;
-    }
-
-    _urlHasProtocol() {
-        return this._url.match(PROTOCOL_REGEX);
-    }
-
     _throwIfErrorCaught() {
         if (this._errorCaught) {
             throw this._errorCaught;
@@ -220,6 +248,27 @@ class PageAnalyzer {
         return !_.isNil(value) && (!_.isObjectLike(value) || !_.isEmpty(value));
     }
 
+}
+
+function getUrl(url, defaultProtocol) {
+    if (!urlHasProtocol(url)) {
+        return `${defaultProtocol}://${url}`;
+    }
+    return url;
+}
+
+function urlHasProtocol(url) {
+    return url.match(PROTOCOL_REGEX);
+}
+
+function nextRequestStrategyIndexForError(currentIndex, error, url) {
+    for (let i = currentIndex + 1; i < requestStrategies.length; i++) {
+        let strategy = requestStrategies[i];
+        if (strategy.canSolveError(error, url)) {
+            return i;
+        }
+    }
+    return -1;
 }
 
 module.exports = PageAnalyzer;

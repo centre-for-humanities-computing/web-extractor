@@ -19,11 +19,6 @@ module.exports = {
     },
 
     /**
-     * If screenshot is enabled do an additional screenshot after each waitFor has completed
-     */
-    screenshotAfterWaitFor: false, // optional
-
-    /**
      * Extract data from the given web-page and control when to extract.
      *
      * If multiple extractions separated by waitFor is required an array of objects with and extractor
@@ -56,13 +51,19 @@ module.exports = {
      * @see #dataTemplate
      * @returns {object}
      */
+
     extractor: {
         /**
          * Wait for this method to complete before running the extract() method
          * Can be used to wait for a specific event to occur. See the puppeteer documentation, especially
          * https://github.com/puppeteer/puppeteer/blob/v2.0.0/docs/api.md#pagewaitforselectororfunctionortimeout-options-args
          *
-         * For complex rules it is possible to do selection in iteration by returning the index of the next extractor to execute.
+         * What should happen after the waitFor succeeds can be be controlled by returning and object in the following format
+         * {
+         *     screenshot: {boolean} // optional
+         *     nextExtractorIndex: {integer} // optional
+         * }
+         * nextExtractorIndex makes it possible to do selection and iteration by returning the index of the next extractor to execute.
          * So you could e.g. say that if x is present go to extractor ant index 1 otherwise go to extractor at index 2
          *
          * @param page the puppeteer page
@@ -74,6 +75,7 @@ module.exports = {
                 timeout: 1000 // wait for maximum 1sec
             });
         },
+
         /**
          * Executed in the context of the page.
          * If info for the given CMP was found return an object with all the data which should be saved
@@ -94,6 +96,7 @@ module.exports = {
             }
             return res;
         },
+
         /**
          * Extract with the puppeteer page object. MUST be async or return a Promise
          * If info for the given CMP was found return an object with all the data which should be saved

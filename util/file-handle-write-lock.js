@@ -30,14 +30,20 @@ class FileHandleWriteLock {
     /**
      * This method can safely be called from multiple async functions and will first write
      * the passed in data when the underlying FileHandle is idle
-     * @param data the data to write
+     * @param {string | Array<string>} data the data to write
      * @returns {Promise<void>}
      */
     async write(data) {
         let result = null;
         try {
             await this._lock.acquireAsync();
-            await this._fileHandle.write(data);
+            if (Array.isArray(data)) {
+                for (let str of data) {
+                    await this._fileHandle.write(str);
+                }
+            } else {
+                await this._fileHandle.write(data);
+            }
         } finally {
             this._lock.release();
         }

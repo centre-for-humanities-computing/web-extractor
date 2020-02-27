@@ -128,7 +128,7 @@ class CmpExtractor {
                 await this._queue.onEmpty();
             }
 
-            if (i % (this._maxConcurrency * 20) === 0) {
+            if (i % (this._maxConcurrency * 40) === 0) {
                 await this._queue.onIdle();
                 await this._reloadBrowser(); // prevent to large memory leaks from Chromium
             }
@@ -186,9 +186,8 @@ class CmpExtractor {
 
                 let json = JSON.stringify(entry);
 
-                await this._cmpDataFile.write(json);
-                //avoid concatenating large strings
-                await this._cmpDataFile.write('\n');
+                // make sure everything is written together to avoid race conditions
+                await this._cmpDataFile.write([json, '\n']);
             }
 
             this._progression.completed++;
