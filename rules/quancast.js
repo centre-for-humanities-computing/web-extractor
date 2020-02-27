@@ -69,9 +69,10 @@ module.exports = {
                     // if purposeLink, click purposeLink.
                     // else if !purposeLink && vendorLink, click vendorLink.
                     // else if !purposeLinkg && !vendorLink, done
+
+                    return {'template': template, 'intermediateData': intermediateData};
                 }
 
-                return {'template': template, 'intermediateData': intermediateData};
             }
         }, {
             waitFor: async function(page) {
