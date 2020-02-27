@@ -128,7 +128,7 @@ class CmpExtractor {
                 await this._queue.onEmpty();
             }
 
-            if (i % (this._maxConcurrency * 20) === 0) {
+            if (i % (this._maxConcurrency * 40) === 0) {
                 await this._queue.onIdle();
                 await this._reloadBrowser(); // prevent to large memory leaks from Chromium
             }
