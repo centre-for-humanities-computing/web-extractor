@@ -74,10 +74,7 @@
 #cookieinformation
 #dmi.dk
 #information.dk
-#dandomain.dk
-#borsen.dk
 #videnskab.dk
-#jyskebank.dk
 #gyldendal.dk
 #sikkertrafik.dk
 #cancer.dk
@@ -88,31 +85,51 @@
 #magasin.dk
 #taenk.dk
 #proff.dk
-#degulesider.dk
-#boliga.dk
 #regionh.dk
 #telia.dk
 #Harald-nyborg.dk
-#emaerket.dk
-#boligsiden.dk
-#ida.dk
-#jemogfix.dk
+#ofir.dk
+#rema1000.dk
+
+##  checkboxes
+#????
+##  standard
+#bll.dk
+#eniro.dk
+##  simple
+#wannafind.dk
 #scannet.dk
+#dandomain.dk
+##  overlay
+#topdanmark.dk
+#trafikstyrelsen.dk
 #hifiklubben.dk
 #Bauhaus.dk
-#trafikstyrelsen.dk
-#topdanmark.dk
-#bll.dk
-#ofir.dk
-#eniro.dk
-#rema1000.dk
-#wannafind.dk
+#ida.dk
+#borsen.dk
+##  overlayv2
 #cookieinformation.com
+#jemogfix.dk
+#emaerket.dk
+##  IAB
+#boligsiden.dk
+##   sidebar
+#liberalalliance.dk
+#billigdyrehandel.dk
+
+#CHECK
+#jyskebank.dk
+degulesider.dk
+#boliga.dk
+#liberalalliance.dk
+#coopmedlem.dk
+#billigdyrehandel.dk
 
 #crownpeak
-livenation.co.uk
-economist.com
-cosmopolitan.com
+#livenation.co.uk
+#economist.com
+#cosmopolitan.com
+
 
 #other
 #billetlugen.dk
