@@ -1,12 +1,9 @@
-# Cmp Extractor
-A tool for extracting Consent Management Provider data.
+# Web Extractor
+A tool for extracting DOM content and taking screenshots of web pages. 
 
-Provided a list of urls and a set of extraction rules Cmp-extractor loads each url 
+Provided a list of urls and a set of extraction rules Web Extractor loads each url 
 and test each rule against the page until a rule succeeds or there are no more rules. If a rule 
 succeeds the data described in the rule's extract method is exported.
-
-A set of rules for common CMP's is included as default, 
-but additionally rules can be added and the existing ones can be disabled. 
 
 
 ## Installation
@@ -27,7 +24,7 @@ $ node extract -h
 ### CLI options
 - **`-u, --urls <file>`** [required] - A path to a file with a list of urls for extraction. Each url in the file should be on it's own line
 - **`-d, --destination <directory>`** [required] - A path to the dir where data should be saved. If the dir already contains previous collected data the new data will be appended to the existing files
-- **`-r, --rules <directory>`** [optional] - A path to the dir where extraction rules are located. If not set the "rules" folder in project will be used as default
+- **`-r, --rules <directory>`** [optional] - A path to the dir where extraction rules are located. If not set the "rules" folder in the project will be used as default
 - **`-c, --concurrency <integer>`** [optional, default=15] - The maximum simultaneous loaded pages
 - **`-n, --no-screenshot`** [optional] - Disable screenshots
 - **`-t, --page-timeout <integer>`** [optional, default=90000] - Milliseconds to wait for the initial loading of a page
@@ -39,31 +36,31 @@ $ node extract -h
 
 ### Full Example
 ```
-$ node extract -u /data/urls.txt-d /data/cmp-crawls -c 35 -t 90000
+$ node extract -u /data/urls.txt-d /data/web-extract -c 35 -t 90000
 ```
-*Analyze each url in '/data/urls.txt' and save the results in '/data/cmp-crawls'. 
+*Analyze each url in '/data/urls.txt' and save the results in '/data/web-extract'. 
 Load a maximum of 35 simultaneous pages and wait a maximum of 90000ms for each page to load.*
 
 ### Results
 If the destination path does not contain data from a previous extraction session a new directory will be created with the 
-name "cmp-data-{DATE-TIME}". The created directory has the following structure:
+name "data-{DATE-TIME}". The created directory has the following structure:
 
-- cmp-data.json
-- cmp-not-found-urls.txt
+- data.json
+- no-rule-match-urls.txt
 - errors.json
 - ./screenshots
 
-**cmp-data.json** contains the extracted data for each url where a matching rule could be found. Each line is a 
+**data.json** contains the extracted data for each url where a matching rule could be found. Each line is a 
 self contained json-object, which makes it easy to parse large files line by line.
 
-**cmp-not-found-urls.txt** contains a list of urls which did not match any of the rules.
+**no-rule-match-urls.txt** contains a list of urls which did not match any of the rules.
 
 **errors.json** contains a json object for each error occurred during the extraction process.
 
 **screenshots** contains one or more screenshots for each url where a rule matched.
 
 ### Resuming a Previous Extraction
-If a path to a directory containing previous extracted data is passed in, Cmp-extractor will
+If a path to a directory containing previous extracted data is passed in, Web Extractor will
 add to the existing files and screenshot directory instead of creating a new directory. 
 
 ### Screenshots
@@ -87,7 +84,7 @@ structure:
 
 ```
 module.exports = {
-    cmpName: 'name of cmp', //required
+    name: 'name of the rule', //required
 
     dataTemplate: function() {} // optional
     
@@ -98,9 +95,9 @@ module.exports = {
     
 };
 ```
-##### cmpName \<string>
+##### name \<string>
 
-The name of the CMP or some other name identifying the extracted data.
+The name of the rule or some other name identifying the extracted data.
 
 ##### dataTemplate()
 

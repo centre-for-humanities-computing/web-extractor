@@ -33,15 +33,15 @@ const requestStrategies = [
 
 class PageAnalyzer {
 
-    constructor(url, cmpRules, pageTimeout) {
+    constructor(url, rules, pageTimeout) {
         this._url = url;
-        this._cmpRules = cmpRules;
+        this._rules = rules;
         this._pageTimeout = pageTimeout;
         this._screenshotCounter = 1;
     }
 
     /**
-     * Parse the page according to cmpRules passed to the constructor. If more than one rule is present
+     * Parse the page according to rules passed to the constructor. If more than one rule is present
      * the first matching rule will be used for the result.
      *
      * @param {string} browser the browser instance
@@ -49,10 +49,10 @@ class PageAnalyzer {
      *
      * @returns {Promise<object>}
      */
-    async extractCmpData(browser, screenshotOptions = undefined) {
+    async extractData(browser, screenshotOptions = undefined) {
         this._resetActionTimerAndThrowIfErrorCaught();
         let result = {
-            cmpName: undefined,
+            name: undefined,
             data: undefined,
             requestStrategy: undefined
         };
@@ -108,7 +108,7 @@ class PageAnalyzer {
                 this._resetActionTimerAndThrowIfErrorCaught();
             }
 
-            for (let rule of this._cmpRules) {
+            for (let rule of this._rules) {
                 let dataTemplate = (rule.dataTemplate ? rule.dataTemplate() : null);
                 if (dataTemplate) {
                     dataTemplate = _.cloneDeep(dataTemplate); //user can make changes to template, so make sure to make a new copy for every run
@@ -117,7 +117,7 @@ class PageAnalyzer {
                 // rule-utils makes sure this is an array
                 let extractors = rule.extractor;
 
-                let cmpData = null;
+                let data = null;
                 let firstExtractCall = true;
 
                 for (let i = 0; i < extractors.length;) {
@@ -145,7 +145,7 @@ class PageAnalyzer {
                         } catch (e) {
                             if (e instanceof puppeteer.errors.TimeoutError) {
                                 if (config.debug) {
-                                    console.error(`Timeout Error for rule in: ${rule.cmpName}, for url: ${this._url}`);
+                                    console.error(`Timeout Error for rule in: ${rule.name}, for url: ${this._url}`);
                                 }
                                 break; // go to the next rule, in outer loop
                             } else {
@@ -160,7 +160,7 @@ class PageAnalyzer {
                             dataCollector = dataTemplate;
                             firstExtractCall = false;
                         } else {
-                            dataCollector = cmpData;
+                            dataCollector = data;
                         }
 
                         if (extractor.extractPuppeteer) {
@@ -168,25 +168,25 @@ class PageAnalyzer {
                             if (!(extractPromise instanceof Promise)) {
                                 throw new Error(`extractor.extractPuppeteer must be async or return a Promise`);
                             }
-                            cmpData = await extractPromise;
+                            data = await extractPromise;
                             this._resetActionTimerAndThrowIfErrorCaught();
                         }
 
                         if (extractor.extract) {
-                            cmpData = await page.evaluate(extractor.extract, dataCollector);
+                            data = await page.evaluate(extractor.extract, dataCollector);
                             this._resetActionTimerAndThrowIfErrorCaught();
                         }
 
-                        if (!PageAnalyzer.isRuleMatch(cmpData)) { // break the extractor chain if returned data doesn't match, and go to next rule
+                        if (!PageAnalyzer.isRuleMatch(data)) { // break the extractor chain if returned data doesn't match, and go to next rule
                             break;
                         }
                     }
                     i++;
                 }
 
-                if (PageAnalyzer.isRuleMatch(cmpData)) {
-                    result.cmpName = rule.cmpName;
-                    result.data = cmpData;
+                if (PageAnalyzer.isRuleMatch(data)) {
+                    result.name = rule.name;
+                    result.data = data;
                     break;
                 }
             }
@@ -212,7 +212,7 @@ class PageAnalyzer {
      */
     timeElapsedSinceLastActivityNs() {
         if (this._lastActivity === undefined) {
-            throw new Error("PageAnalyzer.timeElapsedSinceLastActivityNs() should only be called after a call to extractCmpData()");
+            throw new Error("PageAnalyzer.timeElapsedSinceLastActivityNs() should only be called after a call to extractData()");
         }
         return process.hrtime.bigint() - this._lastActivity;
     }

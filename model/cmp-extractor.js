@@ -23,8 +23,8 @@ const DEFAULT_OPTIONS = Object.freeze({
 });
 
 const FILE_NAMES = Object.freeze({
-    cmpData: 'cmp-data.json',
-    cmpNotFoundUrls: 'cmp-not-found-urls.txt',
+    data: 'data.json',
+    noRuleMatchUrls: 'no-rule-match-urls.txt',
     errors: 'errors.json'
 });
 
@@ -38,16 +38,16 @@ const bigIntDescComparator = (a, b) => {
     return 0;
 };
 
-class CmpExtractor {
+class WebExtractor {
 
-    constructor(urls, cmpRules, destDir, options = {}) {
+    constructor(urls, rules, destDir, options = {}) {
         options = _.defaults(options, DEFAULT_OPTIONS);
         this._urls = urls;
-        this._cmpRules = cmpRules;
-        if (this._isExistingCmpDataDir(destDir)) {
+        this._rules = rules;
+        if (this._isExistingDataDir(destDir)) {
             this._destDir = destDir;
         } else {
-            let dataDirName = `cmp-data-${getDateTimeDirString()}`;
+            let dataDirName = `data-${getDateTimeDirString()}`;
             this._destDir = path.join(destDir, dataDirName);
         }
         this._takeScreenshot = options.takeScreenshot;
@@ -78,8 +78,8 @@ class CmpExtractor {
         }
 
         // open files
-        this._cmpDataFile = await FileHandleWriteLock.open(path.join(this._destDir, FILE_NAMES.cmpData), 'a');
-        this._cmpNotFoundUrlFile = await FileHandleWriteLock.open(path.join(this._destDir, FILE_NAMES.cmpNotFoundUrls), 'a');
+        this._dataFile = await FileHandleWriteLock.open(path.join(this._destDir, FILE_NAMES.data), 'a');
+        this._noRuleMatchUrlsFile = await FileHandleWriteLock.open(path.join(this._destDir, FILE_NAMES.noRuleMatchUrls), 'a');
         this._errorLogFile = await FileHandleWriteLock.open(path.join(this._destDir, FILE_NAMES.errors), 'a');
 
         let closeTimer = setInterval(async () => {
@@ -137,7 +137,7 @@ class CmpExtractor {
         await this._queue.onIdle();
 
         //close files
-        for (let fileHandleWriteLock of [this._cmpDataFile, this._cmpNotFoundUrlFile, this._errorLogFile]) {
+        for (let fileHandleWriteLock of [this._dataFile, this._noRuleMatchUrlsFile, this._errorLogFile]) {
             try {
                 await fileHandleWriteLock.close();
             } catch (e) {
@@ -154,7 +154,7 @@ class CmpExtractor {
     async _runAnalysis(url) {
         let analyzer = null;
         try {
-            analyzer = new PageAnalyzer(url, this._cmpRules, this._pageTimeout);
+            analyzer = new PageAnalyzer(url, this._rules, this._pageTimeout);
             this._activePageAnalyzers.add(analyzer);
 
             let id = uniqid();
@@ -168,16 +168,16 @@ class CmpExtractor {
             }
 
             let browser = await this._browserInstance();
-            let res = await analyzer.extractCmpData(browser, screenshotInfo);
+            let res = await analyzer.extractData(browser, screenshotInfo);
 
             if (!PageAnalyzer.isRuleMatch(res.data)) {
-                await this._cmpNotFoundUrlFile.write(url + '\n');
+                await this._noRuleMatchUrlsFile.write(url + '\n');
             } else {
                 let entry = {
                     time: (new Date()).toISOString(),
+                    name: res.name,
                     url: url,
                     requestStrategy: res.requestStrategy,
-                    cmpName: res.cmpName,
                     data: res.data
                 };
 
@@ -188,7 +188,7 @@ class CmpExtractor {
                 let json = JSON.stringify(entry);
 
                 // make sure everything is written together to avoid race conditions
-                await this._cmpDataFile.write([json, '\n']);
+                await this._dataFile.write([json, '\n']);
             }
 
             this._progression.completed++;
@@ -264,8 +264,8 @@ class CmpExtractor {
         }
     }
 
-    _isExistingCmpDataDir(dirPath) {
-        return fsStandard.existsSync(dirPath) && fsStandard.existsSync(path.join(dirPath, FILE_NAMES.cmpData));
+    _isExistingDataDir(dirPath) {
+        return fsStandard.existsSync(dirPath) && fsStandard.existsSync(path.join(dirPath, FILE_NAMES.data));
     }
 
 }
@@ -287,6 +287,6 @@ function padDatePart(part) {
     return `${part}`.padStart(2, '0');
 }
 
-CmpExtractor.DEFAULT_OPTIONS = DEFAULT_OPTIONS;
+WebExtractor.DEFAULT_OPTIONS = DEFAULT_OPTIONS;
 
-module.exports = CmpExtractor;
+module.exports = WebExtractor;

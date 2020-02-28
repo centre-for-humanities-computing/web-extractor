@@ -1,3 +1,5 @@
+//let template = require('__data-template-example');
+
 const template = {
     html: null,
     descriptionPresent: false,
@@ -5,7 +7,7 @@ const template = {
 };
 
 module.exports = {
-    cmpName: 'test', //required
+    name: 'test', //required
 
     /**
      * Return an object which will be passed in to the first extractor function. The template will be cloned
