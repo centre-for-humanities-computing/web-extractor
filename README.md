@@ -34,7 +34,8 @@ $ node extract -h
 - **`-i, --use-id-for-screenshot-name`** [optional] - Use an universal unique id for screenshot names instead of the url
 - **`-x, --debug`** [optional] - Print more detailed error information
 
-If the log file contains many "Navigation timeout" errors, try lowering concurrency or increase page-timeout. 
+>**NOTE** if `cpm-data.json` contains many results with a `requestStrategy` equal to `domContentLoaded` or `errors.json` 
+> contains many `TimeoutError` errors, try lowering concurrency or increase page-timeout. 
 
 ### Full Example
 ```

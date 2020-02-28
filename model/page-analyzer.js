@@ -10,6 +10,7 @@ const CHROME_ARGS = ['--ignore-certificate-errors']; // still doesn't seem to wo
 
 const requestStrategies = [
     { // default request
+        name: 'primary', //if no protocol use http, wait for document load event
         fetch: async function(page, url) {
             return await page.goto(getUrl(url, 'http'), {waitUntil: ['load'], ignoreHTTPSErrors: true, args: CHROME_ARGS});
         },
@@ -52,7 +53,8 @@ class PageAnalyzer {
         this._resetActionTimerAndThrowIfErrorCaught();
         let result = {
             cmpName: undefined,
-            data: undefined
+            data: undefined,
+            requestStrategy: undefined
         };
 
         let page;
@@ -81,6 +83,7 @@ class PageAnalyzer {
                     if (response === null) {
                         throw new error.NullError("Response was null");
                     }
+                    result.requestStrategy = strategy.name;
                 } catch (e) {
                     let nextIndex = nextRequestStrategyIndexForError(i, e, this._url);
                     if (nextIndex < 0) {

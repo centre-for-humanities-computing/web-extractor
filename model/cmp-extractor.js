@@ -176,6 +176,7 @@ class CmpExtractor {
                 let entry = {
                     time: (new Date()).toISOString(),
                     url: url,
+                    requestStrategy: res.requestStrategy,
                     cmpName: res.cmpName,
                     data: res.data
                 };
