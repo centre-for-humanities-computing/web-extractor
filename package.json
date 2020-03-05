@@ -1,15 +1,19 @@
 {
-  "name": "gdpr-analyzer",
-  "version": "0.1.0",
-  "description": "",
-  "main": "index.js",
+  "name": "@chcaa/web-extractor",
+  "version": "1.0.0",
+  "description": "Extract DOM content and take screenshots based and user defined rules",
+  "main": "src/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "files": [
+    "/src/**"
+  ],
   "dependencies": {
+    "app-root-path": "^3.0.0",
     "await-lock": "^2.0.1",
     "commander": "^4.1.1",
     "filenamify-url": "^2.1.1",

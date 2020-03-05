@@ -1,9 +1,9 @@
 const fs = require('fs').promises;
-const CmpExtractor = require('../model/cmp-extractor');
+const WebExtractor = require('../src/model/web-extractor');
 const path = require('path');
-const fileUtil = require('../util/file-util');
-const ruleUtil = require('../util/rule-util');
-const config = require('../config');
+const fileUtil = require('../src/util/file-util');
+const ruleUtil = require('../src/util/rule-util');
+const config = require('../src/config');
 
 let destDir = 'd:/temp/cmp-temp';
 //let urlsPath = path.join(destDir, 'top10Kfor29EUcountries.txt');
@@ -15,9 +15,9 @@ config.debug = true;
 
 async function demo() {
 
-    //let rules = await ruleUtil.getCmpRules(path.join(destDir, 'rules'));
+    //let rules = await ruleUtil.getRules(path.join(destDir, 'rules'));
 
-    let rules = await ruleUtil.getCmpRules(path.join(__dirname, '../rules'));
+    let rules = await ruleUtil.getRules(path.join(__dirname, '../rules'));
     let urls = await fileUtil.getUrls(urlsPath);
 
     if (maxConcurrency > 10) {
@@ -31,7 +31,7 @@ async function demo() {
         pageTimeoutMs: 90000
     };
 
-    let cmpExtractor = new CmpExtractor(urls, rules, destDir, options);
+    let cmpExtractor = new WebExtractor(urls, rules, destDir, options);
     cmpExtractor.addProgressionListener((progress) => {
         console.log(progress);
     });

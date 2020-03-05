@@ -3,7 +3,7 @@ const path = require('path');
 const _ = require('lodash');
 const config = require('../config');
 
-module.exports.getCmpRules = async function(dir) {
+module.exports.getRules = async function(dir) {
     let rules = [];
     let filenames = await fs.readdir(dir);
     filenames.sort();

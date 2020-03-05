@@ -1,10 +1,10 @@
 const fs = require('fs').promises;
-const CmpExtractor = require('./model/cmp-extractor');
+const WebExtractor = require('./src/model/web-extractor');
 const path = require('path');
-const fileUtil = require('./util/file-util');
-const ruleUtil = require('./util/rule-util');
+const fileUtil = require('./src/util/file-util');
+const ruleUtil = require('./src/util/rule-util');
 const cli = require('commander');
-const config = require('./config');
+const config = require('./src/config');
 const _ = require('lodash');
 const singleLineLog = require('single-line-log').stdout;
 
@@ -26,10 +26,10 @@ async function run() {
         cli.requiredOption('-u, --urls <file>', optDesc.urls);
         cli.requiredOption('-d, --destination <directory>', optDesc.destination);
         cli.option('-r, --rules <directory>', optDesc.rules);
-        cli.option('-c, --concurrency <integer>', optDesc.concurrency, CmpExtractor.DEFAULT_OPTIONS.maxConcurrency);
+        cli.option('-c, --concurrency <integer>', optDesc.concurrency, WebExtractor.DEFAULT_OPTIONS.maxConcurrency);
         cli.option('-n, --no-screenshot', optDesc.noScreenshot);
-        cli.option('-t, --page-timeout <integer>', optDesc.pageTimeout, CmpExtractor.DEFAULT_OPTIONS.pageTimeoutMs);
-        cli.option('-i, --use-id-for-screenshot-name', optDesc.useIdForScreenshotName, CmpExtractor.DEFAULT_OPTIONS.useIdForScreenshotName);
+        cli.option('-t, --page-timeout <integer>', optDesc.pageTimeout, WebExtractor.DEFAULT_OPTIONS.pageTimeoutMs);
+        cli.option('-i, --use-id-for-screenshot-name', optDesc.useIdForScreenshotName, WebExtractor.DEFAULT_OPTIONS.useIdForScreenshotName);
         cli.option('-x, --debug', optDesc.debug, false);
 
         cli.parse(process.argv);
@@ -49,7 +49,7 @@ async function run() {
             rulesDir = path.join(__dirname, 'rules');
         }
 
-        let rules = await ruleUtil.getCmpRules(rulesDir);
+        let rules = await ruleUtil.getRules(rulesDir);
         let urls = await fileUtil.getUrls(urlsPath);
 
         if (concurrency > 10) {
@@ -65,12 +65,12 @@ async function run() {
 
         let start = Date.now();
 
-        let cmpExtractor = new CmpExtractor(urls, rules, destDir, options);
-        cmpExtractor.addProgressionListener((progress) => {
+        let webExtractor = new WebExtractor(urls, rules, destDir, options);
+        webExtractor.addProgressionListener((progress) => {
             let line = `pending: ${progress.pending}, completed: ${progress.completed}, failed: ${progress.failed}, total: ${progress.total}\n`;
             singleLineLog(line);
         });
-        await cmpExtractor.execute();
+        await webExtractor.execute();
 
         console.log(`done... (elapsed: ${elapsedTime(start)})`);
     } catch(e) {

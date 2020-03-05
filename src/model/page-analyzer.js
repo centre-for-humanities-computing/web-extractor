@@ -20,11 +20,22 @@ const requestStrategies = [
     },
     /* //TODO, test if this makes a difference when we already have ignoreHTTPSErrors: true
     { // sometimes response is null when redirected to https, try again with https if no user specified protocol
+        name: 'protocolHttps',
         fetch: async function(page, url) {
             return await page.goto(getUrl(url,'https'), {waitUntil: ['load'], ignoreHTTPSErrors: true, args: CHROME_ARGS});
         },
         canSolveError: function (error, url) {
             return (error instanceof error.NullError) && !urlHasProtocol(url);
+        }
+    }*/
+    /*
+    { // sometimes load is never reached because of some js popup etc. try to fallback to domcontentloaded
+        name: 'domContentLoaded',
+        fetch: async function(page, url) {
+            return await page.goto(getUrl(url,'http'), {waitUntil: ['domcontentloaded'], ignoreHTTPSErrors: true, args: CHROME_ARGS});
+        },
+        canSolveError: function(error, url) {
+            return error instanceof puppeteer.errors.TimeoutError;
         }
     }*/
 

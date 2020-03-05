@@ -5,20 +5,21 @@ Provided a list of urls and a set of extraction rules Web Extractor loads each u
 and test each rule against the page until a rule succeeds or there are no more rules. If a rule 
 succeeds the data described in the rule's extract method is exported.
 
+Web Extractor can be used as a CLI program or as a npm module. 
 
-## Installation
+## CLI Installation
 - Install [node.js](https://nodejs.org/en/download/) version 12.9 or higher
 - Clone this repository
 - Navigate to the root of the repository and run
 ```
-$ npm install
+npm install
 ```
 
 
-## Usage
+### Usage
 - Navigate to the root of the repository and run 
 ```
-$ node extract -h 
+node extract -h 
 ```
 
 ### CLI options
@@ -41,7 +42,62 @@ $ node extract -u /data/urls.txt-d /data/web-extract -c 35 -t 90000
 *Analyze each url in '/data/urls.txt' and save the results in '/data/web-extract'. 
 Load a maximum of 35 simultaneous pages and wait a maximum of 90000ms for each page to load.*
 
-### Results
+## NPM Module Installation
+run:
+```
+npm install @chcaa/web-extractor
+```
+
+### Usage
+To get started with some simple extractions, create a simple rule (see [Extraction Rules](#extraction-rules)) 
+and do the following:
+```
+const WebExtractor = require('@chcaa/web-extractor');
+
+async function run() {
+    let urls = ['https://www.dr.dk', 'tv2.dk'];
+    let rulesDir = null; // default to the rules dir at the root of the project
+    let destDir = '/temp/data/web-extractor';
+
+    let extractor = new WebExtractor(urls, rulesDir, destDir);
+
+    await extractor.execute();
+}
+
+run();
+```
+
+### API
+The following methods and properties are available:
+
+##### constructor(urls, rulesDir, destDir, [options])
+- `urls` - an array of urls or a path to a file with urls. (one url pr. line)
+- `rulesDir` - the dir where the extraction rules are located or null if the `rules` dir at the root of 
+    the project should be used
+- `destDir` - the dir where the extracted data and screenshots should be saved 
+- `options` - additional options in the format
+  - ```
+    {
+        takeScreenshot: {boolean} default true,
+        useIdForScreenshotName: {boolean} default false,
+        maxConcurrency: {integer} default 15,
+        pageTimeoutMs: {integer} default 90000,
+        printProgression: {boolean} default false
+    }
+    ```  
+##### execute([progressionListener]) <async>
+- `progressionListener` - a function which will be notified on progression during the extraction
+
+Returns: `Promise<undefined>` - resolves when extraction completes or fails if an unhandled error occurred
+
+###### errors <static>
+An object with the internal custom errors thrown by Web Extractor.  Can be used in rules which want to 
+be able to throw the same kinds of errors for e.g. consistency in the error-log.
+
+##### debug([enable]) <static>
+- `enable` a boolean enabling or disabling debug information to the console. 
+    
+## Results
 If the destination path does not contain data from a previous extraction session a new directory will be created with the 
 name "data-{DATE-TIME}". The created directory has the following structure:
 
@@ -70,9 +126,12 @@ So even if no rule does match or there are no rules at all a screenshot is still
 For further control each rule can specify if additional screenshots should be taken (see [extractor.waitFor](#extractorwaitforpage-async)).
 
 ## Extraction Rules
+Rules defines what should be extracted from given web-page as well as when the extraction should take place.
+
 Each rule is tested one by one in alphabetical order until a match is found. 
 In the event of a match the result is saved and any remaining rules are aborted.
-If no `rules` path is passed in the default extraction rules, located in the `rules` directory of the project, will be used.
+
+If no `rules` path is passed in the rules (if any) located in the `rules` directory of the project, will be used.
 
 ### Disabling and Deleting Rules
 A rule can be temporarily disabled by prefixing the file name with double underscore e.g. `__cookiebot.js`. To completely
