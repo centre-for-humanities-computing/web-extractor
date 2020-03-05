@@ -14,6 +14,7 @@ const AwaitLock = require('await-lock').default;
  * multiple async functions at once.
  */
 class FileHandleWriteLock {
+
     constructor(fileHandle) {
         this._fileHandle = fileHandle;
         this._lock = new AwaitLock();
@@ -34,7 +35,6 @@ class FileHandleWriteLock {
      * @returns {Promise<void>}
      */
     async write(data) {
-        let result = null;
         try {
             await this._lock.acquireAsync();
             if (Array.isArray(data)) {

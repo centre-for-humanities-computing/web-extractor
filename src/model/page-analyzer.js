@@ -3,7 +3,6 @@ const _ = require('lodash');
 const path = require('path');
 const puppeteer = require('puppeteer');
 const config = require('../config');
-const ruleUtil = require('../util/rule-util');
 
 const PROTOCOL_REGEX = /^https?:\/\//;
 const CHROME_ARGS = ['--ignore-certificate-errors']; // still doesn't seem to work in headless mode and neither does ignoreHTTPSErrors below
@@ -56,7 +55,7 @@ class PageAnalyzer {
      * the first matching rule will be used for the result.
      *
      * @param {string} browser the browser instance
-     * @param {object} screenshot and object with {dirPath, imageName} or undefined (default) if no screenshot is required
+     * @param {object} screenshotOptions and object with {dirPath, imageName} or undefined (default) if no screenshot is required
      *
      * @returns {Promise<object>}
      */
