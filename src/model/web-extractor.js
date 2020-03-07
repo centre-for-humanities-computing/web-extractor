@@ -16,10 +16,14 @@ const config = require('../config');
 
 
 const DEFAULT_OPTIONS = Object.freeze({
-    takeScreenshot: true,
     useIdForScreenshotName: false,
     maxConcurrency: 15,
-    pageTimeoutMs: 90000
+    pageTimeoutMs: 90000,
+    output: {
+        screenshot: true,
+        logs: true,
+        data: true
+    }
 });
 
 const FILE_NAMES = Object.freeze({
@@ -41,7 +45,7 @@ const bigIntDescComparator = (a, b) => {
 class WebExtractor {
 
     constructor(urls, rules, destDir, options = {}) {
-        options = _.defaults(options, DEFAULT_OPTIONS);
+        options = _.defaultsDeep({}, options, DEFAULT_OPTIONS);
         this._urls = urls;
         this._rules = rules;
         if (this._isExistingDataDir(destDir)) {
@@ -50,7 +54,10 @@ class WebExtractor {
             let dataDirName = `data-${getDateTimeDirString()}`;
             this._destDir = path.join(destDir, dataDirName);
         }
-        this._takeScreenshot = options.takeScreenshot;
+        this._executed = false;
+        this._takeScreenshot = options.output.screenshot;
+        this._saveData = options.output.data;
+        this._saveLogs = options.output.logs;
         this._useIdForScreenshotName = options.useIdForScreenshotName;
         this._maxConcurrency = options.maxConcurrency;
         this._pageTimeout = options.pageTimeoutMs;
@@ -71,6 +78,10 @@ class WebExtractor {
     }
 
     async execute() {
+        if (this._executed) {
+            throw new Error('cannot execute an WebExtractor more than once');
+        }
+        this._executed = true;
         // mkdir if not exists
         await fs.mkdir(this._destDir, {recursive: true});
         if (this._takeScreenshot) {
@@ -78,9 +89,13 @@ class WebExtractor {
         }
 
         // open files
-        this._dataFile = await FileHandleWriteLock.open(path.join(this._destDir, FILE_NAMES.data), 'a');
-        this._noRuleMatchUrlsFile = await FileHandleWriteLock.open(path.join(this._destDir, FILE_NAMES.noRuleMatchUrls), 'a');
-        this._errorLogFile = await FileHandleWriteLock.open(path.join(this._destDir, FILE_NAMES.errors), 'a');
+        if (this._saveData) {
+            this._dataFile = await FileHandleWriteLock.open(path.join(this._destDir, FILE_NAMES.data), 'a');
+        }
+        if (this._saveLogs) {
+            this._noRuleMatchUrlsFile = await FileHandleWriteLock.open(path.join(this._destDir, FILE_NAMES.noRuleMatchUrls), 'a');
+            this._errorLogFile = await FileHandleWriteLock.open(path.join(this._destDir, FILE_NAMES.errors), 'a');
+        }
 
         let closeTimer = setInterval(async () => {
             let analyzersSorted = Array.from(this._activePageAnalyzers).sort(bigIntDescComparator);
@@ -93,12 +108,16 @@ class WebExtractor {
                         error.errorType = 'forceClose';
                         error.error = `The analyzer for ${analyzer._url} has been inactive for ${analyzer.timeElapsedSinceLastActivityNs() / 1000000n}ms`;
                         let json = JSON.stringify(error) + '\n';
-                        await this._errorLogFile.write(json);
+                        await this._writeFileHandle(this._errorLogFile, json);
+
+                        if (config.debug) {
+                            console.error(json);
+                        }
 
                         try {
                             /*
                             * make the hanging promise throw and error in PageAnalyzer.
-                            * Sometimes a faulty page makes pupeteer page.screenshot() and page.evaluate() hang forever
+                            * Sometimes a faulty page makes puppeteer page.screenshot() and page.evaluate() hang forever
                             * */
                             await analyzer.close();
                         } catch(e) {
@@ -109,7 +128,7 @@ class WebExtractor {
                     } finally {
                         // reset the remaining analyzers
                         for (let analyzer of analyzersSorted) {
-                            analyzer._resetActionTimerAndThrowIfErrorCaught();
+                            analyzer._resetActionTimer();
                         }
                     }
                 }
@@ -138,6 +157,9 @@ class WebExtractor {
 
         //close files
         for (let fileHandleWriteLock of [this._dataFile, this._noRuleMatchUrlsFile, this._errorLogFile]) {
+            if (!fileHandleWriteLock) { // could be undefined if disabled by user options
+                continue;
+            }
             try {
                 await fileHandleWriteLock.close();
             } catch (e) {
@@ -170,25 +192,30 @@ class WebExtractor {
             let browser = await this._browserInstance();
             let res = await analyzer.extractData(browser, screenshotInfo);
 
-            if (!PageAnalyzer.isRuleMatch(res.data)) {
-                await this._noRuleMatchUrlsFile.write(url + '\n');
-            } else {
-                let entry = {
-                    time: (new Date()).toISOString(),
-                    name: res.name,
-                    url: url,
-                    requestStrategy: res.requestStrategy,
-                    data: res.data
-                };
+            if (!res.afterExtractAbortSave) {
+                if (!PageAnalyzer.isRuleMatch(res.data)) {
+                    await this._writeFileHandle(this._noRuleMatchUrlsFile, url + '\n');
+                    if (config.debug) {
+                        console.log(`No match found for url: ${url}`);
+                    }
+                } else {
+                    let entry = {
+                        time: (new Date()).toISOString(),
+                        name: res.name,
+                        url: url,
+                        requestStrategy: res.requestStrategy,
+                        data: res.data
+                    };
 
-                if (this._useIdForScreenshotName) {
-                    entry.id = id;
+                    if (this._useIdForScreenshotName) {
+                        entry.id = id;
+                    }
+
+                    let json = JSON.stringify(entry);
+
+                    // make sure everything is written together to avoid race conditions (the array of data)
+                    await this._writeFileHandle(this._dataFile, [json, '\n']);
                 }
-
-                let json = JSON.stringify(entry);
-
-                // make sure everything is written together to avoid race conditions
-                await this._dataFile.write([json, '\n']);
             }
 
             this._progression.completed++;
@@ -209,11 +236,18 @@ class WebExtractor {
                 error.stack = e.stack;
             }
             let json = JSON.stringify(error) + '\n';
-            await this._errorLogFile.write(json);
+            await this._writeFileHandle(this._errorLogFile, json);
+
         } finally {
             this._progression.pending--;
             this._emitProgression();
             this._activePageAnalyzers.delete(analyzer);
+        }
+    }
+
+    async _writeFileHandle(handle, data) {
+        if (handle) { // can be undefined if user disabled it in options
+            return handle.write(data); // just return the promise from write instead of wrapping it in yet another promise by awaiting it
         }
     }
 

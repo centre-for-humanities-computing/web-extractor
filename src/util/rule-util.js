@@ -32,10 +32,18 @@ module.exports.getRules = async function(dir) {
     }
 
     if (config.debug && rules.length === 0) {
-        console.log(`No rules found in ${path.resolve(dir)}`)
+        console.log(`No rules found in ${path.resolve(dir)}`);
     }
 
     return rules;
+};
+
+module.exports.initRules = async function(rules, initOptions) {
+    for (let rule of rules) {
+        if (rule.init) {
+            await rule.init(initOptions);
+        }
+    }
 };
 
 function prepareRule(rule) {

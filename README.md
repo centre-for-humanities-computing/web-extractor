@@ -74,14 +74,19 @@ The following methods and properties are available:
 - `urls` - an array of urls or a path to a file with urls. (one url pr. line)
 - `rulesDir` - the dir where the extraction rules are located or null if the `rules` dir at the root of 
     the project should be used
-- `destDir` - the dir where the extracted data and screenshots should be saved 
+- `destDir` - the dir where the extracted data, screenshots and logs should be saved 
 - `options` - additional options in the format
+
   - ```
     {
-        takeScreenshot: {boolean} default true,
         useIdForScreenshotName: {boolean} default false,
         maxConcurrency: {integer} default 15,
         pageTimeoutMs: {integer} default 90000,
+        output: {
+            screenshot: {boolean} default true,
+            logs: {boolean} default true,
+            data: {boolean} default true
+        }
         printProgression: {boolean} default false
     }
     ```  
@@ -123,7 +128,7 @@ add to the existing files and screenshot directory instead of creating a new dir
 If screenshots are enabled (default) a screenshot will taken of every page which can be reached.
 So even if no rule does match or there are no rules at all a screenshot is still taken. 
 
-For further control each rule can specify if additional screenshots should be taken (see [extractor.waitFor](#extractorwaitforpage-async)).
+For further control each rule can specify if additional screenshots should be taken (see [extractor.beforeExtract](#extractorbeforeextractpage-async)).
 
 ## Extraction Rules
 Rules defines what should be extracted from given web-page as well as when the extraction should take place.
@@ -148,8 +153,9 @@ module.exports = {
     dataTemplate: function() {} // optional
     
     extractor: {
-        waitFor: async function(page) {}, // optional 
+        beforeExtract: async function(page) {}, // optional 
         extract: function(template) {} // optional
+        afterExtract: function(data) {} // optional
      }
     
 };
@@ -157,6 +163,23 @@ module.exports = {
 ##### name \<string>
 
 The name of the rule or some other name identifying the extracted data.
+
+##### init(options) \<async>
+- `options` - an object with relevant config data from the extractor:
+ 
+  - ```
+    {
+        destDir: {string}
+    }
+    ```
+
+Returns: `Promise<undefined>`
+
+If defined this method will be called once before any extraction takes place. 
+
+Can be used for initializing the rule or other preparations which should take place before 
+rule is processed.
+
 
 ##### dataTemplate()
 
@@ -170,11 +193,11 @@ object, so it is safe to modify the template object in the `extract` method.
 
 The extractor object should have one or both of the following methods:
 
-##### extractor.waitFor(page) \<async>
+##### extractor.beforeExtract(page) \<async>
 
 - `page` - an instance of a [puppeteer page](https://github.com/puppeteer/puppeteer/blob/v2.1.0/docs/api.md#class-page)
 
-Returns: `Promise<object | undefined>` - a control object for what to do when waitFor succeeds or `undefined` (default) if the normal order of execution should be followed
+Returns: `Promise<object | undefined>` - a control object for what to do when beforeExtract succeeds or `undefined` (default) if the normal order of execution should be followed
 
 The returned object can have the following options:
 - `screenshot` - take a screenshot
@@ -196,7 +219,7 @@ To wait for a given DOM-element to become present and then take a screenshot you
 
 ```
 extractor: { 
-    waitFor: async function(page) {
+    beforeExtract: async function(page) {
         await page.waitFor('#my-element' {timeout: 5000});
         return {
             screenshot: true
@@ -207,12 +230,12 @@ extractor: {
 ```
 
 When the `extractor` is made up of more extractors (see [Multiple Extractors](#multiple-extractors)) it can be desirable to be able to choose which
-extractor to run next depending on a condition in `waitFor`. This can be controlled by returning an object with the 
+extractor to run next depending on a condition in `beforeExtract`. This can be controlled by returning an object with the 
 property `nextExctractorIndex` which determines the next extractor to run. E.g.
 
 ```
 extractor: {
-    waitFor: async function(page) {
+    beforeExtract: async function(page) {
         try {
             await page.waitFor('#my-element' {timeout: 5000});
             return 2;
@@ -271,9 +294,21 @@ extractor: {
 }
 ```
 
+##### extractor.afterExtract(data) \<async>
+
+- `data` - the extracted data from [extractor.extract](#extractorextracttemplate)
+
+Returns: `Promise<data | undefined>` return the processed version of the passed in data or `undefined` 
+if you will handle the saving the data yourself 
+
+This method will only be called on a successful return value from [extractor.extract](#extractorextracttemplate)
+
+Use this method to do post processing of the extracted data or to handle further saving of data yourself. 
+In the case of returning `undefined` the extractor chain will be broken and no further extractors will be called.
+
 #### Multiple Extractors
 Sometimes it is required to click buttons, wait for events to happen etc. to complete an extraction. The extractor can
-then be divided into multiple sections by providing an array of objects with one or both of `waitFor` and `extract`. 
+then be divided into multiple sections by providing an array of objects with one or both of `beforeExtract` and `extract`. 
 Each extractor will get passed the return value from the previous extractor so you can add to this to get a combined result 
 (if present the `template` will be passed to the first object's `extract` method).
 
@@ -286,7 +321,7 @@ click next and extract some more text you could do:
 ```
 extractor: [
     {
-        waitFor: async function(page) {
+        beforeExtract: async function(page) {
             await page.waitFor('.popup');
         },
         extract: function() {
@@ -296,7 +331,7 @@ extractor: [
             return data;
         }
     }, {
-        waitFor: async function(page) {
+        beforeExtract: async function(page) {
             await page.click('.popup .next-button');
             await page.waitFor('.popup .page2');
         },

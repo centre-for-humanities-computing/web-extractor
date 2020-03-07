@@ -17,6 +17,7 @@ class ExtractorWrapper {
      * @param options additional settings see the readme file
      */
     constructor(urls, rulesDir, destDir, options) {
+        this._executed = false;
         this._urls = urls;
         if (!rulesDir) {
             rulesDir = path.join(appRootPath.toString(), 'rules');
@@ -27,11 +28,17 @@ class ExtractorWrapper {
     }
 
     async execute(progressionListener) {
+        if (this._executed) {
+            throw new Error('Each extractor instance can only be executed once');
+        }
+        this._executed = true;
+
         let urls = this._urls;
         if (!Array.isArray(urls)) {
             urls = await fileUtil.getUrls(urls);
         }
         let rules = await ruleUtil.getRules(this._rulesDir);
+        await ruleUtil.initRules(rules, {destDir: this._destDir}); // init rules every time because destDir can change
         let webExtractor = new WebExtractor(urls, rules, this._destDir, this._options);
         this._webExtractor = webExtractor;
         if (progressionListener) {

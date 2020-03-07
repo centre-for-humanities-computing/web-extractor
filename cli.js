@@ -50,6 +50,7 @@ async function run() {
         }
 
         let rules = await ruleUtil.getRules(rulesDir);
+        await ruleUtil.initRules(rules, {destDir: destDir});
         let urls = await fileUtil.getUrls(urlsPath);
 
         if (concurrency > 10) {
@@ -57,7 +58,9 @@ async function run() {
         }
 
         let options = {
-            takeScreenshot: takeScreenshot,
+            output: {
+                screenshot: takeScreenshot
+            },
             maxConcurrency: concurrency,
             pageTimeoutMs: pageTimeout,
             useIdForScreenshotName: useIdForScreenshotName

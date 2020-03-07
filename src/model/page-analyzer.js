@@ -64,7 +64,8 @@ class PageAnalyzer {
         let result = {
             name: undefined,
             data: undefined,
-            requestStrategy: undefined
+            requestStrategy: undefined,
+            afterExtractAbortSave: false
         };
 
         let page;
@@ -132,21 +133,21 @@ class PageAnalyzer {
 
                 for (let i = 0; i < extractors.length;) {
                     let extractor = extractors[i];
-                    if (extractor.waitFor) {
+                    if (extractor.beforeExtract) {
                         try {
-                            let waitForResponse = await extractor.waitFor(page);
-                            if (typeof waitForResponse !== 'object') {
-                                waitForResponse = {};
+                            let beforeExtractResponse = await extractor.beforeExtract(page);
+                            if (typeof beforeExtractResponse !== 'object') {
+                                beforeExtractResponse = {};
                             }
                             this._resetActionTimerAndThrowIfErrorCaught();
 
-                            if (screenshotOptions && waitForResponse.screenshot) {
+                            if (screenshotOptions && beforeExtractResponse.screenshot) {
                                 await page.screenshot({path: this._getScreenshotPath(screenshotOptions.dirPath, screenshotOptions.imageName)});
                                 this._resetActionTimerAndThrowIfErrorCaught();
                             }
 
-                            if (_.isInteger(waitForResponse.nextExtractorIndex)) {
-                                i = waitForResponse.nextExtractorIndex;
+                            if (_.isInteger(beforeExtractResponse.nextExtractorIndex)) {
+                                i = beforeExtractResponse.nextExtractorIndex;
                                 if (config.debug) {
                                     console.log(`Jumping to extractor at index: ${i}`);
                                 }
@@ -190,8 +191,21 @@ class PageAnalyzer {
                         if (!PageAnalyzer.isRuleMatch(data)) { // break the extractor chain if returned data doesn't match, and go to next rule
                             break;
                         }
+
+                        // only if valid (see above)
+                        if (extractor.afterExtract) {
+                            data = await extractor.afterExtract(data);
+                            if (data === undefined) {
+                                result.afterExtractAbortSave = true;
+                                break;
+                            }
+                        }
                     }
                     i++;
+                }
+
+                if (result.afterExtractAbortSave) {
+                    break;
                 }
 
                 if (PageAnalyzer.isRuleMatch(data)) {
@@ -227,8 +241,18 @@ class PageAnalyzer {
         return process.hrtime.bigint() - this._lastActivity;
     }
 
-    _resetActionTimerAndThrowIfErrorCaught() {
+    _resetActionTimer() {
         this._lastActivity = process.hrtime.bigint();
+    }
+
+    _throwIfErrorCaught() {
+        if (this._errorCaught) {
+            throw this._errorCaught;
+        }
+    }
+
+    _resetActionTimerAndThrowIfErrorCaught() {
+        this._resetActionTimer();
         this._throwIfErrorCaught();
     }
 
@@ -236,12 +260,6 @@ class PageAnalyzer {
         let imageFullName = `${imageName}_${this._screenshotCounter}.png`;
         this._screenshotCounter++;
         return path.join(dirPath, imageFullName);
-    }
-
-    _throwIfErrorCaught() {
-        if (this._errorCaught) {
-            throw this._errorCaught;
-        }
     }
 
     async close() {

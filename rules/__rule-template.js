@@ -10,6 +10,16 @@ module.exports = {
     name: 'test', //required
 
     /**
+     * Called once before any extraction has taken place.
+     * Can be used for loading settings for the rule and other initial setup
+     * @param initOptions settings passed to the extractor e.g. {destDir}
+     * @returns {Promise<void>}
+     */
+    init: async function(initOptions) { // optional
+        // do setup
+    },
+
+    /**
      * Return an object which will be passed in to the first extractor function. The template will be cloned
      * for every time it is passed to the first extractor function for each url, to prevent the original template being modified.
      * The returned object must be JSON serializable.
@@ -23,8 +33,8 @@ module.exports = {
     /**
      * Extract data from the given web-page and control when to extract.
      *
-     * If multiple extractions separated by waitFor is required an array of objects with and extractor
-     * and a waitFor can be returned. Each extractor will get passed the return value from the previous
+     * If multiple extractions separated by beforeExtract is required an array of objects with and extractor
+     * and a beforeExtract can be returned. Each extractor will get passed the return value from the previous
      * extractor so it is possible keep appending to the same object. See also {@link #dataTemplate}
      *
      * *** Example ***
@@ -71,7 +81,7 @@ module.exports = {
          * @param page the puppeteer page
          * @returns {Promise<object>}
          */
-        waitFor: async function(page) { // optional
+        beforeExtract: async function(page) { // optional
             /* EXAMPLE */
             await page.waitFor('p.cmp-name', {
                 timeout: 1000 // wait for maximum 1sec
