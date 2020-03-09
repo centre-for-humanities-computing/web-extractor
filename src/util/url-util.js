@@ -6,7 +6,7 @@ module.exports.getUrls = async function(file) {
     content = content.replace(/\r\n/, '\n').replace(/\r/, '\n');
     let urls = content.split('\n')
         .map((line) => line.trim())
-        .filter((line) => line.length > 0 && line[0] != '#')
+        .filter((line) => line.length > 0 && line[0] !== '#')
         .map((line) => line.startsWith('{') ? JSON.parse(line) : line);
 
     validateUrls(urls);

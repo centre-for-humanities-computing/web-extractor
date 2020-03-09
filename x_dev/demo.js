@@ -1,4 +1,3 @@
-const fs = require('fs').promises;
 const WebExtractor = require('../src/model/web-extractor');
 const path = require('path');
 const urlUtil = require('../src/util/url-util');

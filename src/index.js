@@ -4,8 +4,6 @@ const config = require('./config');
 const urlUtil = require('./util/url-util');
 const ruleUtil = require('./util/rule-util');
 const singleLineLog = require('single-line-log').stdout;
-const appRootPath = require('app-root-path');
-const path = require('path');
 
 class WebExtractorApi {
 

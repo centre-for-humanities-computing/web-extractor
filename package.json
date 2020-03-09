@@ -17,7 +17,6 @@
     "/src/**"
   ],
   "dependencies": {
-    "app-root-path": "^3.0.0",
     "await-lock": "^2.0.1",
     "commander": "^4.1.1",
     "filenamify-url": "^2.1.1",
