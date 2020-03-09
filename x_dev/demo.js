@@ -1,7 +1,7 @@
 const fs = require('fs').promises;
 const WebExtractor = require('../src/model/web-extractor');
 const path = require('path');
-const fileUtil = require('../src/util/file-util');
+const urlUtil = require('../src/util/url-util');
 const ruleUtil = require('../src/util/rule-util');
 const config = require('../src/config');
 
@@ -18,16 +18,17 @@ async function demo() {
     //let rules = await ruleUtil.getRules(path.join(destDir, 'rules'));
 
     let rules = await ruleUtil.getRules(path.join(__dirname, '../rules'));
-    let urls = await fileUtil.getUrls(urlsPath);
+    let urls = await urlUtil.getUrls(urlsPath);
 
     if (maxConcurrency > 10) {
         process.setMaxListeners(maxConcurrency + 10); // prevent warning caused by puppeteer registering listeners for each instance
     }
 
     let options = {
-        takeScreenshot: true,
+        output: {
+            screenshot: true
+        },
         maxConcurrency: maxConcurrency,
-        createNewDirForEachRun: true,
         pageTimeoutMs: 90000
     };
 

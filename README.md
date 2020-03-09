@@ -56,10 +56,16 @@ const WebExtractor = require('@chcaa/web-extractor');
 
 async function run() {
     let urls = ['https://www.dr.dk', 'tv2.dk'];
-    let rulesDir = null; // default to the rules dir at the root of the project
+
+    let rule = {
+        extract: function() {
+            return document.querySelector('h1');
+        }
+    };
+
     let destDir = '/temp/data/web-extractor';
 
-    let extractor = new WebExtractor(urls, rulesDir, destDir);
+    let extractor = new WebExtractor(urls, rule, destDir);
 
     await extractor.execute();
 }
@@ -70,10 +76,13 @@ run();
 ### API
 The following methods and properties are available:
 
-##### constructor(urls, rulesDir, destDir, [options])
-- `urls` - an array of urls or a path to a file with urls. (one url pr. line)
-- `rulesDir` - the dir where the extraction rules are located or null if the `rules` dir at the root of 
-    the project should be used
+##### constructor(urls, rules, destDir, [options])
+- `urls` - an array of urls or a path to a file with urls. (one url pr. line). If further input is needed along with
+the url the url can be and object with a property named `url` the object will the be passed in to relevant methods of
+the extraction rules (see [Creating Rules](#creating-rules)). If the url's are located in a file each line can be
+a string in JSON-format.
+- `rules` - the dir where the extraction rules are located or a rule object or an array of rule objects 
+(see [Creating Rules](#creating-rules))  
 - `destDir` - the dir where the extracted data, screenshots and logs should be saved 
 - `options` - additional options in the format
 
@@ -153,16 +162,16 @@ module.exports = {
     dataTemplate: function() {} // optional
     
     extractor: {
-        beforeExtract: async function(page) {}, // optional 
-        extract: function(template) {} // optional
-        afterExtract: function(data) {} // optional
+        beforeExtract: async function(page, url) {}, // optional 
+        extract: function(template, url) {} // optional
+        afterExtract: function(data, rul) {} // optional
      }
     
 };
 ```
 ##### name \<string>
 
-The name of the rule or some other name identifying the extracted data.
+The name of the rule or some other name identifying the extracted data. If only one rule is used the name can be omitted.
 
 ##### init(options) \<async>
 - `options` - an object with relevant config data from the extractor:
@@ -191,11 +200,12 @@ object, so it is safe to modify the template object in the `extract` method.
 
 ##### extractor \<object | array>
 
-The extractor object should have one or both of the following methods:
+The extractor object should have at least one of the following methods:
 
-##### extractor.beforeExtract(page) \<async>
+##### extractor.beforeExtract(page, [url]) \<async>
 
 - `page` - an instance of a [puppeteer page](https://github.com/puppeteer/puppeteer/blob/v2.1.0/docs/api.md#class-page)
+- `url` - the url or url object currently being processed
 
 Returns: `Promise<object | undefined>` - a control object for what to do when beforeExtract succeeds or `undefined` (default) if the normal order of execution should be followed
 
@@ -246,9 +256,10 @@ extractor: {
 }
 ```
 
-##### extractor.extract([template])
+##### extractor.extract([template], [url])
 
 - `template` - a clone of the template object returned by `dataTemplate()` or `null` if `dataTemplate()` is not defined
+- `url` - the url or url object currently being processed
 
 Returns: the extraction result or one of: `null`, `undefined`, `[]` or `{}` if no result was found
 
@@ -271,10 +282,11 @@ extractor: {
 }
 ```
 
-##### extractor.extractPuppeteer(page, [template]) \<async>
+##### extractor.extractPuppeteer(page, [template], [url]) \<async>
 
 - `page` - a puppeteer [`page`](https://github.com/puppeteer/puppeteer/blob/master/docs/api.md#class-page) instance. 
 - `template` - a clone of the template object returned by `dataTemplate()` or `null` if `dataTemplate()` is not defined
+- `url` - the url or url object currently being processed
 
 Returns `Promise<?>`: the extraction result or one of: `null`, `undefined`, `[]` or `{}` if no result was found
 
@@ -294,12 +306,13 @@ extractor: {
 }
 ```
 
-##### extractor.afterExtract(data) \<async>
+##### extractor.afterExtract(data, [url]) \<async>
 
 - `data` - the extracted data from [extractor.extract](#extractorextracttemplate)
+- `url` - the url or url object currently being processed
 
 Returns: `Promise<data | undefined>` return the processed version of the passed in data or `undefined` 
-if you will handle the saving the data yourself 
+if you will handle saving the data yourself 
 
 This method will only be called on a successful return value from [extractor.extract](#extractorextracttemplate)
 

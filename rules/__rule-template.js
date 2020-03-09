@@ -7,7 +7,7 @@ const template = {
 };
 
 module.exports = {
-    name: 'test', //required
+    name: 'test', //optional
 
     /**
      * Called once before any extraction has taken place.
@@ -114,13 +114,25 @@ module.exports = {
          * If info for the given CMP was found return an object with all the data which should be saved
          * if the given CMP was not found return an empty object, null, undefined or []
          */
-        extractPuppeteer: async function(page) {
+        extractPuppeteer: async function(page) { // optional
             /* EXAMPLE */
             await page.waitFor('p.cmp-name', {
                 timeout: 1000 // wait for maximum 1sec
             });
             let results = await page.$$('p', (elements) => elements.map((element) => element.textContent));
             return results;
+        },
+
+        /**
+         * This method will only be called on a successful return value from one of the above extract methods
+         *
+         * @param data
+         * @returns {Promise<void | data>}  the processed version of the passed in data or `undefined`
+         if you will handle saving the data yourself
+         */
+        afterExtract: async function(data) { // optional
+            // do some modification
+            return data;
         }
 
     }

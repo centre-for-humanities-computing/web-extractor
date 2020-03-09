@@ -13,6 +13,7 @@ const fkill = require('fkill');
 const AwaitLock = require('await-lock').default;
 const FileHandleWriteLock = require('../util/file-handle-write-lock');
 const config = require('../config');
+const urlUtil = require('../util/url-util');
 
 
 const DEFAULT_OPTIONS = Object.freeze({
@@ -46,7 +47,7 @@ class WebExtractor {
 
     constructor(urls, rules, destDir, options = {}) {
         options = _.defaultsDeep({}, options, DEFAULT_OPTIONS);
-        this._urls = urls;
+        this._userUrls = urls;
         this._rules = rules;
         if (this._isExistingDataDir(destDir)) {
             this._destDir = destDir;
@@ -137,10 +138,10 @@ class WebExtractor {
 
         this._emitProgression();
 
-        for (let i = 0; i < this._urls.length; i++) {
-            let url = this._urls[i];
+        for (let i = 0; i < this._userUrls.length; i++) {
+            let userUrl = this._userUrls[i];
             this._queue.add(() => {
-                return this._runAnalysis(url);
+                return this._runAnalysis(userUrl);
             });
 
             if (i % this._maxConcurrency === 0) {
@@ -173,10 +174,11 @@ class WebExtractor {
         clearInterval(closeTimer);
     }
 
-    async _runAnalysis(url) {
+    async _runAnalysis(userUrl) {
+        let url = urlUtil.unwrapUrl(userUrl);
         let analyzer = null;
         try {
-            analyzer = new PageAnalyzer(url, this._rules, this._pageTimeout);
+            analyzer = new PageAnalyzer(userUrl, this._rules, this._pageTimeout);
             this._activePageAnalyzers.add(analyzer);
 
             let id = uniqid();

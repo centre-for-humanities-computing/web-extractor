@@ -3,6 +3,7 @@ const _ = require('lodash');
 const path = require('path');
 const puppeteer = require('puppeteer');
 const config = require('../config');
+const urlUtil = require('../util/url-util');
 
 const PROTOCOL_REGEX = /^https?:\/\//;
 const CHROME_ARGS = ['--ignore-certificate-errors']; // still doesn't seem to work in headless mode and neither does ignoreHTTPSErrors below
@@ -43,8 +44,9 @@ const requestStrategies = [
 
 class PageAnalyzer {
 
-    constructor(url, rules, pageTimeout) {
-        this._url = url;
+    constructor(userUrl, rules, pageTimeout) {
+        this._url = urlUtil.unwrapUrl(userUrl);
+        this._userUrl = userUrl;
         this._rules = rules;
         this._pageTimeout = pageTimeout;
         this._screenshotCounter = 1;
@@ -135,7 +137,7 @@ class PageAnalyzer {
                     let extractor = extractors[i];
                     if (extractor.beforeExtract) {
                         try {
-                            let beforeExtractResponse = await extractor.beforeExtract(page);
+                            let beforeExtractResponse = await extractor.beforeExtract(page, this._userUrl);
                             if (typeof beforeExtractResponse !== 'object') {
                                 beforeExtractResponse = {};
                             }
@@ -166,16 +168,16 @@ class PageAnalyzer {
                     }
 
                     if (extractor.extract || extractor.extractPuppeteer) {
-                        let dataCollector = null;
+                        let dataArg = null;
                         if (firstExtractCall) {
-                            dataCollector = dataTemplate;
+                            dataArg = dataTemplate;
                             firstExtractCall = false;
                         } else {
-                            dataCollector = data;
+                            dataArg = data;
                         }
 
                         if (extractor.extractPuppeteer) {
-                            let extractPromise = extractor.extractPuppeteer(page, dataCollector);
+                            let extractPromise = extractor.extractPuppeteer(page, dataArg, this._userUrl);
                             if (!(extractPromise instanceof Promise)) {
                                 throw new Error(`extractor.extractPuppeteer must be async or return a Promise`);
                             }
@@ -184,7 +186,7 @@ class PageAnalyzer {
                         }
 
                         if (extractor.extract) {
-                            data = await page.evaluate(extractor.extract, dataCollector);
+                            data = await page.evaluate(extractor.extract, dataArg, this._userUrl);
                             this._resetActionTimerAndThrowIfErrorCaught();
                         }
 
@@ -194,7 +196,7 @@ class PageAnalyzer {
 
                         // only if valid (see above)
                         if (extractor.afterExtract) {
-                            data = await extractor.afterExtract(data);
+                            data = await extractor.afterExtract(data, this._userUrl);
                             if (data === undefined) {
                                 result.afterExtractAbortSave = true;
                                 break;
