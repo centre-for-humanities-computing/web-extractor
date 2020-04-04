@@ -22,8 +22,9 @@ async function map(srcFile, destFile, properties) {
 
         let readerPromise = new Promise((function(resolve, reject) {
             let lineCount = 1;
-            lineReader.eachLine(srcFile, {encoding: 'utf8', separator: '\n'},async (line, isLast) => {
+            lineReader.eachLine(srcFile, {encoding: 'utf8', separator: '\n'},async (line, isLast, cb) => {
                 if (line.trim().length === 0) {
+                    cb(false);
                     return;
                 }
                 try {
@@ -31,9 +32,11 @@ async function map(srcFile, destFile, properties) {
                     let result = extractProperties(json, properties);
                     let jsonString = JSON.stringify(result);
                     await dest.appendFile(jsonString + '\n', {encoding: 'utf8'});
+                    cb(true);
                 } catch(e) {
+                    cb(false);
                     console.error('Error on line:' + lineCount);
-                    console.error(e);
+                    reject(e);
                 }
                 lineCount++;
 
