@@ -1,8 +1,10 @@
+//TODO for all sites, sometimes screenshots are missing?
+
 const template = require('./__cmp-data-template');
 
 module.exports = {
 
-    cmpName: 'OneTrust',
+    cmpName: 'onetrust',
 
     dataTemplate: function() {
         return template;
@@ -15,14 +17,23 @@ module.exports = {
         {
             extract: function (template) {
                 let element = document.querySelector('.optanon-alert-box-wrapper');
+                //found onetrust elements (not just optanon): #onetrust-banner-sdk
+                //fyens.dk
                 if (element) { //TODO sometimes element === true but the rest hasn't loaded yet (forces.net). Shouldn't it be set up to wait for all JS to finish executing?
                     //all HTML
                     template.html = element.outerHTML;
 
+                    function getNumber(stringPixelValue) {
+                        return stringPixelValue.split('px')[0]
+                    }
+
+                    let computedElementWidth = window.getComputedStyle(document.querySelector('.optanon-alert-box-wrapper')).width
+                    let computedPageWidth = document.documentElement.clientWidth
+
                     //notification style
-                    if (window.getComputedStyle(document.querySelector('.optanon-alert-box-wrapper')).width === document.documentElement.clientWidth + "px") {
+                    if (getNumber(computedElementWidth) >= 0.9 * computedPageWidth) {
                         template.notificationStyle = 'banner';
-                    } else if (document.querySelector('.optanon-alert-box-wrapper alert-box-center-tile')) {
+                    } else if (document.querySelector('[class*="optanon-alert-box-wrapper alert-box-center-tile"]')) { //onetrust does not really have barrier notification styles, except from before it acquired and merged with optanon. I'm not sure if this condition properly catches it. It doesn't for msn.com
                         template.notificationStyle = 'barrier';
                     } else {
                         template.notificationStyle = 'custom';
@@ -43,6 +54,8 @@ module.exports = {
                         template.consent.type = 'implied';
                         template.consent.impliedConsentAction.visitPage = true;
                     } else if (consentType === 'opt-in') { //"explicit consent" in the onetrust user manual
+                        template.consent.type = 'explicit';
+                    } else if (consentType === 'explicit consent') { //"explicit consent" in the onetrust user manual
                         template.consent.type = 'explicit';
                     } else if (consentType === 'owner defined') { //"owner defined" in the onetrust user manual
                         template.consent.type = 'custom'
@@ -74,7 +87,7 @@ module.exports = {
                     }
 
                     //reject
-                    //Onetrust does not have a reject all option, afawk
+                    //Onetrust does not have a reject all option, afawk. Have not been able to see one in the wild, not in their online design portal
 
                     //bulkDescription + bulk description HTML
                     if (document.querySelector("#alert-box-message")) {

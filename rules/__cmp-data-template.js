@@ -2,7 +2,7 @@
 //false means we are sure it does not exist
 //if purposeConsent or vendorConsent are empty, it means there are is no purpose or vendor level consent information/options
 module.exports = Object.freeze({
-    notificationStyle: null, //possible values: banner, barrier, custom //Should never be null
+    notificationStyle: null, //possible values: banner, barrier, cornerBox, custom  //Should never be null
     consent: {
         type: null, //implied, explict, custom
         impliedConsentAction: {

@@ -1,11 +1,13 @@
 //TODO simulate clicks on each element and take screenshots of each
 //TODO add the weird 'features' on the IAB tab to the purpose array
 //TODO perhaps remove provider, expiryDate, type from vendor info, since this info isn't available for any other CMP
+
+//TODO: sometimes width=100% is saved as custom instead of banner. Perhaps because element is not finished loading? Add WaitFor('#CybotCookiebotDialog')?
 const template = require('./__cmp-data-template');
 
 module.exports = {
 
-    cmpName: 'Cookiebot',
+    cmpName: 'cookiebot',
 
     dataTemplate: function() {
         return template;

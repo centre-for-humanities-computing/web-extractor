@@ -1,18 +1,21 @@
+//TODO I changed how data is passed between extracts by creating this intermediateData object. Test whether this still works correctly
+
 const template = require('./__cmp-data-template');
 
 module.exports = {
 
-    cmpName: 'Quancast',
+    cmpName: 'quantcast',
 
     dataTemplate: function() {
         return template;
     },
 
+    intermediateData: {},
+
     extractor: [
         {
             extract: function(template) {
                 const element = document.querySelector('#qcCmpUi');
-                let intermediateData = {};
 
                 if (element) {
                     //all HTML
@@ -33,16 +36,26 @@ module.exports = {
                     template.consent.type = 'explicit'
 
                     //accept all
-                    if (document.querySelector("#qcCmpButtons button[onclick*=\'window.__cmpui(\"setAndSaveAllConsent\",!0)\']")
-                        && document.querySelector("#qcCmpButtons button[onclick*=\'window.__cmpui(\"setAndSaveAllConsent\",!0)\']").offsetHeight !== 0) {
+                    if (document.querySelector("#qcCmpButtons button[onclick*=setAndSaveAllConsent]")
+                        && document.querySelector("#qcCmpButtons button[onclick*=setAndSaveAllConsent]").offsetHeight !== 0) {
                         template.acceptAllConsent.present = true;
-                        template.acceptAllConsent.buttonText = document.querySelector("#qcCmpButtons button[onclick*=\'window.__cmpui(\"setAndSaveAllConsent\",!0)\']").innerText;
+                        template.acceptAllConsent.buttonText = document.querySelector("#qcCmpButtons button[onclick*=setAndSaveAllConsent]").innerText;
                         template.acceptAllConsent.clicksRequiredToAccess = 0;
                     }
 
                     //reject all
+                    //TODO figure out how to detect reject all vs more info button!
+                    //on jp.dk more info button = #qc-cmp-purpose-button   .qc-cmp-alt-action qc-cmp-center-bottom   [onclick*=window.__cmpui("updateConsentUi",2)]
+                    //onvalutaomregneren.dk, nothing on the element. Class=qc-cmp-button qc-cmp-secondary-button, but in script vvvvvvv
+                    //if 'No Option':false(onvalutaomregneren.dk)//'No Option': false(feltet.dk) > get rid of whitespace!
+                    //newsbreak.dk > neither on element, nor in script...
+
+                    const rejectAllButtonInitialised = [...document.querySelectorAll('script')]             // get all the scripts
+                                                                    .map(element => element.innerHTML)               // get their contents
+                                                                    .some(element => element.includes('cmp') && (element.includes("'No Option':false") || element.includes("'No Option': false"))) // keep only those containing the query
+
                     if (document.querySelector(".qc-cmp-button.qc-cmp-secondary-button") && document.querySelector(".qc-cmp-button.qc-cmp-secondary-button").offsetHeight !== 0
-                        && document.querySelector(".qc-cmp-button.qc-cmp-secondary-button").innerText.toLowerCase() !== "more options") {
+                        && rejectAllButtonInitialised) {
                         template.rejectAllConsent.present = true;
                         template.rejectAllConsent.buttonText = document.querySelector(".qc-cmp-button.qc-cmp-secondary-button").innerText;
                         template.rejectAllConsent.clicksRequiredToAccess = 0;
@@ -70,7 +83,7 @@ module.exports = {
                     // else if !purposeLink && vendorLink, click vendorLink.
                     // else if !purposeLinkg && !vendorLink, done
 
-                    return {'template': template, 'intermediateData': intermediateData};
+                    return template
                 }
 
             }
@@ -84,14 +97,14 @@ module.exports = {
                 await page.waitFor('#qcCmpPurposesContainer');
 
             },
-            extract: function(passedData) {
+            extract: function(template) {
                 //rejectAll on second page
-                if (passedData.template.rejectAllConsent.present === null) {
+                if (template.rejectAllConsent.present === null) {
                     const rejectAllButton = document.querySelector("button[onclick='window.__cmpui(\"disableAllPurposeConsents\")']");
                     if (rejectAllButton && rejectAllButton.offsetHeight !== 0) {
-                        passedData.template.rejectAllConsent.present = true;
-                        passedData.template.rejectAllConsent.buttonText = rejectAllButton.innerText;
-                        passedData.template.rejectAllConsent.clicksRequiredToAccess = passedData.intermediateData.purposePageClicks;
+                        template.rejectAllConsent.present = true;
+                        template.rejectAllConsent.buttonText = rejectAllButton.innerText;
+                        template.rejectAllConsent.clicksRequiredToAccess = intermediateData.purposePageClicks;
                     }
                 }
 
@@ -100,7 +113,7 @@ module.exports = {
                 for (const purpose of allPurposes) {
                     const name = purpose.querySelector(".qc-cmp-bold-messaging").innerText;
                     const description = purpose.querySelector(".qc-cmp-purpose-description").innerText;
-                    const clicksRequiredToAccess = passedData.intermediateData.purposePageClicks;
+                    const clicksRequiredToAccess = intermediateData.purposePageClicks;
 
                     let hasConsentOption = null;
                     let consentOptionDisabled = null;
@@ -117,7 +130,7 @@ module.exports = {
                         hasConsentOption = false;
                     }
 
-                    passedData.template.purposeConsent.push({
+                    template.purposeConsent.push({
                         'name': name,
                         'description': description,
                         'clicksRequiredToAccess': clicksRequiredToAccess,
@@ -134,26 +147,26 @@ module.exports = {
 
                 const vendorLink = document.querySelector("a[onclick='window.__cmpui(\"updateConsentUi\",3)']");
                 if (vendorLink && vendorLink.offsetHeight !== 0) {
-                    if (!passedData.intermediateData.vendorPageClicks) {
-                        passedData.intermediateData.vendorPageClicks = 2
+                    if (!intermediateData.vendorPageClicks) {
+                        intermediateData.vendorPageClicks = 2
                     }
                     vendorLink.click()
                 }
 
-                return passedData;
+                return template;
             }
         },{
             waitFor: async function(page) {
                 await page.waitFor('#qcCmpPartnerInfo');
             },
-            extract: function(passedData) {
+            extract: function(template) {
                 //rejectAll on third page
-                if (passedData.template.rejectAllConsent.present === null) {
+                if (template.rejectAllConsent.present === null) {
                     const rejectAllButton = document.querySelector("'button[onclick='window.__cmpui(\"toggleAllVendorConsents\",!1)']");
                     if (rejectAllButton && rejectAllButton.offsetHeight !== 0) {
-                        passedData.template.rejectAllConsent.present = true;
-                        passedData.template.rejectAllConsent.buttonText = rejectAllButton.innerText;
-                        passedData.template.rejectAllConsent.clicksRequiredToAccess = passedData.intermediateData.vendorPageClicks;
+                        template.rejectAllConsent.present = true;
+                        template.rejectAllConsent.buttonText = rejectAllButton.innerText;
+                        template.rejectAllConsent.clicksRequiredToAccess = intermediateData.vendorPageClicks;
                     }
                 }
 
@@ -164,7 +177,7 @@ module.exports = {
                     //TODO: purposeCategory is an ugly long string of smushed together purposes now.. make it an array?
                     const purposeCategory = vendor.nextSibling.querySelector('.qc-cmp-vendor-info-list').innerText;
                     const description = vendor.nextSibling.querySelector('.qc-cmp-vendor-info-content').innerText;
-                    const clicksRequiredToAccess = passedData.intermediateData.vendorPageClicks;
+                    const clicksRequiredToAccess = intermediateData.vendorPageClicks;
 
                     //TODO check if the consentOptionDisabled logic is correct > find a test website that has them disabled
                     let hasConsentOption = null;
@@ -182,7 +195,7 @@ module.exports = {
                         hasConsentOption = false;
                     }
 
-                    passedData.template.vendorConsent.push({
+                    template.vendorConsent.push({
                         'name': name,
                         'description': description,
                         'clicksRequiredToAccess': clicksRequiredToAccess,
@@ -192,10 +205,9 @@ module.exports = {
                         'purposeCategory': purposeCategory
                     })
                 }
-                return passedData.template;
+                return template;
             }
         }
-
     ],
 
     screenshotAfterWaitFor: true,

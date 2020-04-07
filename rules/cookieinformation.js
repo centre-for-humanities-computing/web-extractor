@@ -108,15 +108,17 @@ module.exports = {
             } else if (popUpVersion === 'overlay' || popUpVersion === 'overlayv2' || popUpVersion === 'overlayIAB') {
                 template.notificationStyle = 'barrier';
             } else if (popUpVersion === 'sidebar') {
+                template.notificationStyle = 'cornerBox';
+            } else {
                 template.notificationStyle = 'custom';
             }
 
             //consent
-            //as far as I can tell, they do not allow any implicit consent
+            //as far as I can tell, the CMP init does not allow any implicit consent. Individual companies might customise it themselves though
             template.consent.type = 'explicit';
 
             //accept
-            let acceptBtnSelectors = ['[onclick="CookieInformation.submitAllCategories();"]', '[onkeypress="javascript:CookieInformation.submitAllCategories();"]', '.c-decline', '.coi-banner__accept', '.coi-consent-banner__agree-button']; //perhaps overkill, most decline buttons have two of these
+            let acceptBtnSelectors = ['[onclick*="CookieInformation.submitAllCategories()"]', '[onkeypress*="javascript:CookieInformation.submitAllCategories()"]', '.c-decline', '.coi-banner__accept', '.coi-consent-banner__agree-button']; //perhaps overkill, most decline buttons have two of these
             for (const selector of acceptBtnSelectors) {
                 const acceptBtn = document.querySelector(selector);
                 if (acceptBtn) {
@@ -130,7 +132,7 @@ module.exports = {
             //TODO there is also the 'submit currently toggled on' button for consent, which has the onkepress=CookieInformation.submitConsent() (found at emaerket.dk). Is that accept? reject?
 
             //reject
-            let rejectBtnSelectors = ['[onclick="CookieInformation.declineAllCategories();"]', '[onkeypress="javascript:CookieConsent.dialog.submitDecline();"]', '[onclick="CookieConsent.dialog.submitDecline()]', '.c-decline', '#declineButton', '.coi-consent-banner__decline-button']; //perhaps overkill, most decline buttons have two of these
+            let rejectBtnSelectors = ['[onclick*="CookieInformation.declineAllCategories()"]', '[onkeypress*="javascript:CookieConsent.dialog.submitDecline()"]', '[onclick*="CookieConsent.dialog.submitDecline()"]', '.c-decline', '#declineButton']; //'.coi-consent-banner__decline-button' removed because of false positive on chefsworld.dk
             for (const selector of rejectBtnSelectors) {
                 const rejectBtn = document.querySelector(selector);
                 if (rejectBtn) {

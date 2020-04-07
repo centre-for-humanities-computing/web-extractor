@@ -6,9 +6,8 @@ const ruleUtil = require('../util/rule-util');
 const config = require('../config');
 
 let destDir = 'd:/temp/cmp-temp';
-//let urlsPath = path.join(destDir, 'top10Kfor29EUcountries.txt');
-//let urlsPath = path.join(destDir, 'stall-test2.txt');
 let urlsPath = path.join(__dirname, 'urls-test.txt');
+// let urlsPath = path.join(__dirname, '1379DK.txt');
 let maxConcurrency = 15;
 
 config.debug = true;
