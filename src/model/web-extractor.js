@@ -123,6 +123,9 @@ class WebExtractor {
                             await analyzer.close();
                         } catch(e) {
                             //no-op
+                            if (config.debug) {
+                                console.error(`Could not close inactive analyzer for ${analyzer._url}. This could result in an endless loop because the analyzer will never finish...`);
+                            }
                         }
                     } catch (e) {
                         console.error(e); // should never happen

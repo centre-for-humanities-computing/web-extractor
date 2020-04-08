@@ -76,6 +76,7 @@ class PageAnalyzer {
         try {
             this._browserContext = await browser.createIncognitoBrowserContext();
             page = await this._browserContext.newPage();
+            this._page = page;
             this._resetActionTimerAndThrowIfErrorCaught();
 
             page.on('error', (e) => { // on page crash
@@ -219,12 +220,6 @@ class PageAnalyzer {
 
         } finally {
             try {
-                if (page) {
-                    await page.close();
-                }
-            } catch (e) {/* no-op */}
-
-            try {
                 await this.close();
             } catch (e) {/* no-op */}
         }
@@ -265,6 +260,12 @@ class PageAnalyzer {
     }
 
     async close() {
+        if (this._page) {
+            let page = this._page;
+            this._page = null;
+            await page.close();
+        }
+
         if (this._browserContext) {
             let context = this._browserContext;
             this._browserContext = null;
