@@ -260,10 +260,18 @@ class PageAnalyzer {
     }
 
     async close() {
+        let error;
         if (this._page) {
             let page = this._page;
             this._page = null;
-            await page.close();
+            try {
+                await page.close();
+            } catch (e) {
+                error = e;
+                if (config.debug) {
+                    console.error(`Could not close page for ${this._url}`, e);
+                }
+            }
         }
 
         if (this._browserContext) {
