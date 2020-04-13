@@ -225,7 +225,7 @@ class PageAnalyzer {
                         break;
                     }
                 }
-
+                resolve(result);
             } catch(e) {
                 reject(e);
             } finally {
@@ -233,8 +233,6 @@ class PageAnalyzer {
                     await this.close();
                 } catch (e) {/* no-op */}
             }
-
-            resolve(result);
         });
     }
 
@@ -309,6 +307,10 @@ class PageAnalyzer {
         if (this._extractPromiseReject) {
             this._extractPromiseReject(new error.AbandonedError("The analyzer was abandoned, probably due to inactivity"));
         }
+    }
+
+    get abandoned() {
+        return this._abandoned;
     }
 
     /**
