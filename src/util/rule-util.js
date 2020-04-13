@@ -58,7 +58,15 @@ module.exports.validateRules = validateRules = function(rules) {
 
       let extractors = rule.extractor;
       if (!Array.isArray(extractors)) {
-          extractors = [extractors];
+          if (extractors) {
+              extractors = [extractors];
+          } else {
+              extractors = [];
+              if (config.debug) {
+                  console.log("no extractor defined for rule, to define one set the 'extractor' property");
+              }
+          }
+
       }
 
       for (let extractor of extractors) {

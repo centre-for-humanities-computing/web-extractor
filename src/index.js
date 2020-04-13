@@ -4,6 +4,7 @@ const config = require('./config');
 const urlUtil = require('./util/url-util');
 const ruleUtil = require('./util/rule-util');
 const singleLineLog = require('single-line-log').stdout;
+const _ = require('lodash');
 
 class WebExtractorApi {
 
@@ -39,7 +40,7 @@ class WebExtractorApi {
         if (_.isString(this._rules)) {
             rules = await ruleUtil.getRules(this._rules); // also prepares and validates rules
         } else {
-            if (rules instanceof Object) {
+            if (this._rules instanceof Object) {
                 rules = [this._rules];
             } else {
                 rules = this._rules;

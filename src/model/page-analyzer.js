@@ -72,6 +72,9 @@ class PageAnalyzer {
 
         let page;
         this._errorCaught = false;
+        if (screenshotOptions && screenshotOptions.resetCounter) {
+            this._screenshotCounter = 1;
+        }
 
         try {
             this._browserContext = await browser.createIncognitoBrowserContext();
@@ -279,6 +282,15 @@ class PageAnalyzer {
             this._browserContext = null;
             await context.close();
         }
+    }
+
+    async forceClose() {
+        this._forceClosed = true;
+        await this.close();
+    }
+
+    get forceClosed() {
+        return this._forceClosed;
     }
 
     /**

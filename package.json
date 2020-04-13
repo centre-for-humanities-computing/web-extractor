@@ -19,6 +19,7 @@
   "dependencies": {
     "await-lock": "^2.0.1",
     "commander": "^4.1.1",
+    "delay": "^4.3.0",
     "filenamify-url": "^2.1.1",
     "fkill": "^6.2.0",
     "line-reader": "latest",
