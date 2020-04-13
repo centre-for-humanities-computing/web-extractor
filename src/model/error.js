@@ -27,7 +27,21 @@ class NullError extends Error {
 
 }
 
+class AbandonedError extends Error {
+
+    constructor(...params) {
+        super(...params);
+
+        this.name = 'AbandonedError';
+
+        if (Error.captureStackTrace) {
+            Error.captureStackTrace(this, AbandonedError);
+        }
+    }
+}
+
 module.exports = {
+    AbandonedError: AbandonedError,
     HttpError: HttpError,
     NullError: NullError
 };

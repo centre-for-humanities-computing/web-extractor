@@ -102,6 +102,13 @@ class WebExtractor {
         let closeTimer = setInterval(async () => {
             let analyzersSorted = Array.from(this._activePageAnalyzers).sort(bigIntDescComparator);
             let analyzersNotForceClosed = analyzersSorted.filter((analyzer) => !analyzer.forceClosed); // only handle ones not already forceClosed
+            let analyzersForceClosed = _.difference(analyzersSorted, analyzersNotForceClosed);
+
+
+            // force the analyzer to fail if nothing else works
+            for (let analyzer of analyzersForceClosed) {
+                analyzer.abandon(); // nothing more to do
+            }
 
             if (analyzersNotForceClosed.length > 0) {
                 let analyzer = analyzersNotForceClosed.shift();
@@ -124,7 +131,7 @@ class WebExtractor {
 
                         try {
                             /*
-                            * make the hanging promise throw and error in PageAnalyzer.
+                            * try to make the hanging puppeteer promise throw and error in PageAnalyzer.
                             * Sometimes a faulty page makes puppeteer page.screenshot() and page.evaluate() hang forever
                             * */
                             await analyzer.forceClose(); // sets the _forceClosed flag
@@ -145,28 +152,23 @@ class WebExtractor {
         this._emitProgression();
 
         for (let i = 0; i < this._userUrls.length; i++) {
-            /* experimental, to handle analyzers which cannot be closed normally due to chrome hanging forever during e.g. screenshots
-             * This also makes sure that we never have any analyzers waiting i queue because queue would never drain if all active analyzers are blocking forever
-             * and we would then not reach the call to handleFrozenAnalyzers()
-             */
-            await this._handleFrozenAnalyzers();
-
             let userUrl = this._userUrls[i];
 
             this._queue.add(() => {
                 return this._runAnalysis(userUrl);
             });
 
-            // don't use this, because of puppeteer bug which can make analyzer hang forever and therefore the queue will never drain if that bug occurs for all active analyzers
-            // await this._queue.onEmpty();
+            if (i > 0 && (i % this._maxConcurrency) === 0) {
+                await this._queue.onEmpty();
+            }
 
             if (i > 0 && (i % (this._maxConcurrency * 40) === 0)) {
-                await this._onQueueIdleHandleFrozenAnalyzersIfNeeded();
+                await this._queue.onIdle();
                 await this._reloadBrowser(); // prevent to large memory leaks from Chromium
             }
         }
 
-        await this._onQueueIdleHandleFrozenAnalyzersIfNeeded();
+        await this._queue.onIdle();
 
         //close files
         for (let fileHandleWriteLock of [this._dataFile, this._noRuleMatchUrlsFile, this._errorLogFile]) {
@@ -184,51 +186,6 @@ class WebExtractor {
 
         await this._close();
         clearInterval(closeTimer);
-    }
-
-    async _handleFrozenAnalyzers() {
-        let abandoned = true;
-        /* wait until no forceClosed analyzer or only forceClosed analyzers or
-         * important! a slot becomes empty in activePageAnalyzers so we also make sure deadlocks are handled right away.
-         * If we allowed another analyzer to be added to the queue and the current analyzers never finishes we
-         */
-        let forceClosedAnalyzersCount = this._forceClosedAnalyzersCount();
-        while ((forceClosedAnalyzersCount > 0 && forceClosedAnalyzersCount < this._activePageAnalyzers.size)
-                || (this._activePageAnalyzers.size === this._maxConcurrency && forceClosedAnalyzersCount !== this._maxConcurrency)) {
-            await delay(100);
-            forceClosedAnalyzersCount = this._forceClosedAnalyzersCount();
-        }
-
-        if (forceClosedAnalyzersCount > 0) { // we should only have forceClosed analyzers now because of above
-            for (let analyzer of this._activePageAnalyzers) {
-                abandoned = true;
-                this._progression.failed++;
-                this._progression.pending--;
-                let error = createBaseError(analyzer._url);
-                error.errorType = 'abandonAnalyzer';
-                error.error = `The analyzer for ${analyzer._url} has been inactive for ${analyzer.timeElapsedSinceLastActivityNs() / 1000000n}ms and could not be closed by a forceClose. Abandoning analyzer...`;
-                let json = JSON.stringify(error);
-                await this._writeFileHandle(this._errorLogFile, json + '\n');
-
-                if (config.debug) {
-                    console.error(json);
-                }
-            }
-
-            this._queue.clear(); // clear the old queue so in don't continue running
-            this._queue = this._createQueue(); // create an all new queue here, the old queue still await the running analyzers which we now abandon
-            this._activePageAnalyzers.clear();
-            await this._reloadBrowser();
-        }
-        return abandoned;
-    }
-
-    async _onQueueIdleHandleFrozenAnalyzersIfNeeded() {
-        // we cannot just use this._queue.onIndle() because puppeteer can make the analyzers hang forever and the queue would never become idle
-        while (this._activePageAnalyzers.size > 0) {
-            await this._handleFrozenAnalyzers();
-            await delay(100);
-        }
     }
 
     async _runAnalysis(userUrl) {
@@ -266,10 +223,6 @@ class WebExtractor {
                 }
             }
 
-            if (analyzer._abandoned) {
-                return;
-            }
-
             if (!res.afterExtractAbortSave) {
                 if (!PageAnalyzer.isRuleMatch(res.data)) {
                     await this._writeFileHandle(this._noRuleMatchUrlsFile, url + '\n');
@@ -298,10 +251,6 @@ class WebExtractor {
 
             this._progression.completed++;
         } catch (e) {
-            if (analyzer._abandoned) {
-                return;
-            }
-
             this._progression.failed++;
             if (config.debug) {
                 console.error(e);
@@ -321,37 +270,10 @@ class WebExtractor {
             await this._writeFileHandle(this._errorLogFile, json + '\n');
 
         } finally {
-            if (!analyzer._abandoned) {
-                this._progression.pending--;
-                this._emitProgression();
-                this._activePageAnalyzers.delete(analyzer);
-            } else {
-                let error = createBaseError(url);
-                error.errorType = "abandonAnalyzerFatal";
-                error.error = "The analyzer completed or failed even though it was abandoned. This should never happen and should be investigated!";
-                let json = JSON.stringify(error);
-                await this._writeFileHandle(this._errorLogFile, json + '\n');
-            }
+            this._progression.pending--;
+            this._emitProgression();
+            this._activePageAnalyzers.delete(analyzer);
         }
-    }
-
-    _hasForceClosedAnalyzers() {
-        for (let analyzer of this._activePageAnalyzers) {
-            if (analyzer.forceClosed) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    _forceClosedAnalyzersCount() {
-        let count = 0;
-        for (let analyzer of this._activePageAnalyzers) {
-            if (analyzer.forceClosed) {
-                count++;
-            }
-        }
-        return count;
     }
 
     _createQueue() {

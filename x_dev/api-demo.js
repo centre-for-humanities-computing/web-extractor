@@ -1,11 +1,19 @@
 const path = require('path');
 const WebExtractorApi = require('../src/index');
+const delay = require('delay');
 
 async function run() {
     let urlsPath = path.join(__dirname, 'urls-top-1000.txt');
     let destDir = "d:/temp/cmp-temp-test";
     let rule = {
         extractor: {
+            beforeExtract: async (page, url) => {
+                //if (url === 'google.com') {
+                    console.log("Going to sleep for: " + url);
+                    await delay(300000000); // a very long time
+                    console.log("waking up: " + url);
+                //}
+            },
             extract: () => {
                 return true; // we accept all pages as a match
             }
@@ -15,7 +23,7 @@ async function run() {
 
     for (let i = 0; i < 50; i++) { // try to force an error, delete loop again before commit
         console.log("Iteration: " + (i + 1));
-        let webExtractor = new WebExtractorApi(urlsPath, rule, destDir, {maxConcurrency: 15, printProgression: false});
+        let webExtractor = new WebExtractorApi(urlsPath, rule, destDir, {maxConcurrency: 2, printProgression: false});
         try {
             await webExtractor.execute();
         } catch (e) {

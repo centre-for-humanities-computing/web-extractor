@@ -50,6 +50,8 @@ class PageAnalyzer {
         this._rules = rules;
         this._pageTimeout = pageTimeout;
         this._screenshotCounter = 1;
+        this._errorCaught = false;
+        this._extractPromiseReject = null;
     }
 
     /**
@@ -62,172 +64,177 @@ class PageAnalyzer {
      * @returns {Promise<object>}
      */
     async extractData(browser, screenshotOptions = undefined) {
-        this._resetActionTimerAndThrowIfErrorCaught();
-        let result = {
-            name: undefined,
-            data: undefined,
-            requestStrategy: undefined,
-            afterExtractAbortSave: false
-        };
+        return new Promise(async (resolve, reject) => { // we use an explicit promise so we can force reject if it hangs
+            try {
+                this._extractPromiseReject = reject;
+                this._resetActionTimerAndThrowIfErrorCaught();
+                let result = {
+                    name: undefined,
+                    data: undefined,
+                    requestStrategy: undefined,
+                    afterExtractAbortSave: false
+                };
 
-        let page;
-        this._errorCaught = false;
-        if (screenshotOptions && screenshotOptions.resetCounter) {
-            this._screenshotCounter = 1;
-        }
+                let page;
+                this._errorCaught = false;
+                if (screenshotOptions && screenshotOptions.resetCounter) {
+                    this._screenshotCounter = 1;
+                }
 
-        try {
-            this._browserContext = await browser.createIncognitoBrowserContext();
-            page = await this._browserContext.newPage();
-            this._page = page;
-            this._resetActionTimerAndThrowIfErrorCaught();
+                this._browserContext = await browser.createIncognitoBrowserContext();
+                page = await this._browserContext.newPage();
+                this._page = page;
+                this._resetActionTimerAndThrowIfErrorCaught();
 
-            page.on('error', (e) => { // on page crash
-                this._errorCaught = e;
-            });
+                page.on('error', (e) => { // on page crash
+                    this._errorCaught = e;
+                });
 
-            await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:72.0) Gecko/20100101 Firefox/72.0');
+                await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:72.0) Gecko/20100101 Firefox/72.0');
 
-            await page.setDefaultNavigationTimeout(this._pageTimeout);
-            await page.setDefaultTimeout(this._pageTimeout);
+                await page.setDefaultNavigationTimeout(this._pageTimeout);
+                await page.setDefaultTimeout(this._pageTimeout);
 
-            let response = null;
+                let response = null;
 
-            for (let i = 0; i < requestStrategies.length; i++) {
-                let strategy = requestStrategies[i];
-                try {
-                    response = await strategy.fetch(page, this._url);
-                    if (response === null) {
-                        throw new error.NullError("Response was null");
+                for (let i = 0; i < requestStrategies.length; i++) {
+                    let strategy = requestStrategies[i];
+                    try {
+                        response = await strategy.fetch(page, this._url);
+                        if (response === null) {
+                            throw new error.NullError("Response was null");
+                        }
+                        result.requestStrategy = strategy.name;
+                    } catch (e) {
+                        let nextIndex = nextRequestStrategyIndexForError(i, e, this._url);
+                        if (nextIndex < 0) {
+                            throw e;
+                        } else {
+                            i = nextIndex;
+                        }
+                    } finally {
+                        this._resetActionTimerAndThrowIfErrorCaught();
                     }
-                    result.requestStrategy = strategy.name;
-                } catch (e) {
-                    let nextIndex = nextRequestStrategyIndexForError(i, e, this._url);
-                    if (nextIndex < 0) {
-                        throw e;
-                    } else {
-                        i = nextIndex;
-                    }
-                } finally {
+
+                }
+
+                let statusCode = response.status();
+
+                if (statusCode < 200 ||statusCode > 226) {
+                    throw new error.HttpError(statusCode);
+                }
+
+                if (screenshotOptions) {
+                    await page.screenshot({path: this._getScreenshotPath(screenshotOptions.dirPath, screenshotOptions.imageName)});
                     this._resetActionTimerAndThrowIfErrorCaught();
                 }
 
-            }
+                for (let rule of this._rules) {
+                    let dataTemplate = (rule.dataTemplate ? rule.dataTemplate() : null);
+                    if (dataTemplate) {
+                        dataTemplate = _.cloneDeep(dataTemplate); //user can make changes to template, so make sure to make a new copy for every run
+                    }
 
-            let statusCode = response.status();
+                    // rule-utils makes sure this is an array
+                    let extractors = rule.extractor;
 
-            if (statusCode < 200 ||statusCode > 226) {
-                throw new error.HttpError(statusCode);
-            }
+                    let data = null;
+                    let firstExtractCall = true;
 
-            if (screenshotOptions) {
-                await page.screenshot({path: this._getScreenshotPath(screenshotOptions.dirPath, screenshotOptions.imageName)});
-                this._resetActionTimerAndThrowIfErrorCaught();
-            }
+                    for (let i = 0; i < extractors.length;) {
+                        let extractor = extractors[i];
+                        if (extractor.beforeExtract) {
+                            try {
+                                let beforeExtractResponse = await extractor.beforeExtract(page, this._userUrl);
+                                if (typeof beforeExtractResponse !== 'object') {
+                                    beforeExtractResponse = {};
+                                }
+                                this._resetActionTimerAndThrowIfErrorCaught();
 
-            for (let rule of this._rules) {
-                let dataTemplate = (rule.dataTemplate ? rule.dataTemplate() : null);
-                if (dataTemplate) {
-                    dataTemplate = _.cloneDeep(dataTemplate); //user can make changes to template, so make sure to make a new copy for every run
-                }
+                                if (screenshotOptions && beforeExtractResponse.screenshot) {
+                                    await page.screenshot({path: this._getScreenshotPath(screenshotOptions.dirPath, screenshotOptions.imageName)});
+                                    this._resetActionTimerAndThrowIfErrorCaught();
+                                }
 
-                // rule-utils makes sure this is an array
-                let extractors = rule.extractor;
-
-                let data = null;
-                let firstExtractCall = true;
-
-                for (let i = 0; i < extractors.length;) {
-                    let extractor = extractors[i];
-                    if (extractor.beforeExtract) {
-                        try {
-                            let beforeExtractResponse = await extractor.beforeExtract(page, this._userUrl);
-                            if (typeof beforeExtractResponse !== 'object') {
-                                beforeExtractResponse = {};
+                                if (_.isInteger(beforeExtractResponse.nextExtractorIndex)) {
+                                    i = beforeExtractResponse.nextExtractorIndex;
+                                    if (config.debug) {
+                                        console.log(`Jumping to extractor at index: ${i}`);
+                                    }
+                                    continue;
+                                }
+                            } catch (e) {
+                                if (e instanceof puppeteer.errors.TimeoutError) {
+                                    if (config.debug) {
+                                        console.error(`Timeout Error for rule in: ${rule.name}, for url: ${this._url}`);
+                                    }
+                                    break; // go to the next rule, in outer loop
+                                } else {
+                                    throw e;
+                                }
                             }
-                            this._resetActionTimerAndThrowIfErrorCaught();
+                        }
 
-                            if (screenshotOptions && beforeExtractResponse.screenshot) {
-                                await page.screenshot({path: this._getScreenshotPath(screenshotOptions.dirPath, screenshotOptions.imageName)});
+                        if (extractor.extract || extractor.extractPuppeteer) {
+                            let dataArg = null;
+                            if (firstExtractCall) {
+                                dataArg = dataTemplate;
+                                firstExtractCall = false;
+                            } else {
+                                dataArg = data;
+                            }
+
+                            if (extractor.extractPuppeteer) {
+                                let extractPromise = extractor.extractPuppeteer(page, dataArg, this._userUrl);
+                                if (!(extractPromise instanceof Promise)) {
+                                    throw new Error(`extractor.extractPuppeteer must be async or return a Promise`);
+                                }
+                                data = await extractPromise;
                                 this._resetActionTimerAndThrowIfErrorCaught();
                             }
 
-                            if (_.isInteger(beforeExtractResponse.nextExtractorIndex)) {
-                                i = beforeExtractResponse.nextExtractorIndex;
-                                if (config.debug) {
-                                    console.log(`Jumping to extractor at index: ${i}`);
-                                }
-                                continue;
+                            if (extractor.extract) {
+                                data = await page.evaluate(extractor.extract, dataArg, this._userUrl);
+                                this._resetActionTimerAndThrowIfErrorCaught();
                             }
-                        } catch (e) {
-                            if (e instanceof puppeteer.errors.TimeoutError) {
-                                if (config.debug) {
-                                    console.error(`Timeout Error for rule in: ${rule.name}, for url: ${this._url}`);
-                                }
-                                break; // go to the next rule, in outer loop
-                            } else {
-                                throw e;
-                            }
-                        }
-                    }
 
-                    if (extractor.extract || extractor.extractPuppeteer) {
-                        let dataArg = null;
-                        if (firstExtractCall) {
-                            dataArg = dataTemplate;
-                            firstExtractCall = false;
-                        } else {
-                            dataArg = data;
-                        }
-
-                        if (extractor.extractPuppeteer) {
-                            let extractPromise = extractor.extractPuppeteer(page, dataArg, this._userUrl);
-                            if (!(extractPromise instanceof Promise)) {
-                                throw new Error(`extractor.extractPuppeteer must be async or return a Promise`);
-                            }
-                            data = await extractPromise;
-                            this._resetActionTimerAndThrowIfErrorCaught();
-                        }
-
-                        if (extractor.extract) {
-                            data = await page.evaluate(extractor.extract, dataArg, this._userUrl);
-                            this._resetActionTimerAndThrowIfErrorCaught();
-                        }
-
-                        if (!PageAnalyzer.isRuleMatch(data)) { // break the extractor chain if returned data doesn't match, and go to next rule
-                            break;
-                        }
-
-                        // only if valid (see above)
-                        if (extractor.afterExtract) {
-                            data = await extractor.afterExtract(data, this._userUrl);
-                            if (data === undefined) {
-                                result.afterExtractAbortSave = true;
+                            if (!PageAnalyzer.isRuleMatch(data)) { // break the extractor chain if returned data doesn't match, and go to next rule
                                 break;
                             }
+
+                            // only if valid (see above)
+                            if (extractor.afterExtract) {
+                                data = await extractor.afterExtract(data, this._userUrl);
+                                if (data === undefined) {
+                                    result.afterExtractAbortSave = true;
+                                    break;
+                                }
+                            }
                         }
+                        i++;
                     }
-                    i++;
+
+                    if (result.afterExtractAbortSave) {
+                        break;
+                    }
+
+                    if (PageAnalyzer.isRuleMatch(data)) {
+                        result.name = rule.name;
+                        result.data = data;
+                        break;
+                    }
                 }
 
-                if (result.afterExtractAbortSave) {
-                    break;
-                }
-
-                if (PageAnalyzer.isRuleMatch(data)) {
-                    result.name = rule.name;
-                    result.data = data;
-                    break;
-                }
+            } catch(e) {
+                reject(e);
+            } finally {
+                try {
+                    await this.close();
+                } catch (e) {/* no-op */}
             }
 
-        } finally {
-            try {
-                await this.close();
-            } catch (e) {/* no-op */}
-        }
-
-        return result;
+            resolve(result);
+        });
     }
 
     /**
@@ -291,6 +298,16 @@ class PageAnalyzer {
 
     get forceClosed() {
         return this._forceClosed;
+    }
+
+    /**
+     * Will reject the active promise for #extractData if present
+     */
+    abandon() {
+        this._abandoned = true;
+        if (this._extractPromiseReject) {
+            this._extractPromiseReject(new error.AbandonedError("The analyzer was abandoned, probably due to inactivity"));
+        }
     }
 
     /**
