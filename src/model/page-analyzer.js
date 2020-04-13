@@ -65,22 +65,23 @@ class PageAnalyzer {
      */
     async extractData(browser, screenshotOptions = undefined) {
         return new Promise(async (resolve, reject) => { // we use an explicit promise so we can force reject if it hangs
+            let result = {
+                name: undefined,
+                data: undefined,
+                requestStrategy: undefined,
+                afterExtractAbortSave: false
+            };
+
+            let page;
+            this._errorCaught = false;
+            this._extractPromiseReject = reject;
+
+            if (screenshotOptions && screenshotOptions.resetCounter) {
+                this._screenshotCounter = 1;
+            }
+
             try {
-                this._extractPromiseReject = reject;
                 this._resetActionTimerAndThrowIfErrorCaught();
-                let result = {
-                    name: undefined,
-                    data: undefined,
-                    requestStrategy: undefined,
-                    afterExtractAbortSave: false
-                };
-
-                let page;
-                this._errorCaught = false;
-                if (screenshotOptions && screenshotOptions.resetCounter) {
-                    this._screenshotCounter = 1;
-                }
-
                 this._browserContext = await browser.createIncognitoBrowserContext();
                 page = await this._browserContext.newPage();
                 this._page = page;
