@@ -58,8 +58,10 @@ async function run() {
     let urls = ['https://www.dr.dk', 'tv2.dk'];
 
     let rule = {
-        extract: function() {
-            return document.querySelector('h1');
+        extractor: {
+            extract: function() {
+                return document.querySelector('h1');
+            }
         }
     };
 
