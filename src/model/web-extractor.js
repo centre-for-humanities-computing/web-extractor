@@ -11,7 +11,6 @@ const errors = require('./error');
 const puppeteer = require('puppeteer');
 const fkill = require('fkill');
 const AwaitLock = require('await-lock').default;
-const delay = require('delay');
 const FileHandleWriteLock = require('../util/file-handle-write-lock');
 const config = require('../config');
 const urlUtil = require('../util/url-util');
@@ -104,47 +103,44 @@ class WebExtractor {
             let analyzersNotForceClosed = analyzersSorted.filter((analyzer) => !analyzer.forceClosed); // only handle ones not already forceClosed
             let analyzersForceClosed = _.difference(analyzersSorted, analyzersNotForceClosed);
 
+            try {
+                // force the analyzer to fail if nothing else works
+                for (let analyzer of analyzersForceClosed) {
+                    analyzer.abandon(); // nothing more to do
+                }
 
-            // force the analyzer to fail if nothing else works
-            for (let analyzer of analyzersForceClosed) {
-                analyzer.abandon(); // nothing more to do
-            }
+                if (analyzersNotForceClosed.length > 0) {
+                    let analyzer = analyzersNotForceClosed.shift();
 
-            if (analyzersNotForceClosed.length > 0) {
-                let analyzer = analyzersNotForceClosed.shift();
-
-                if (analyzer.timeElapsedSinceLastActivityNs() > (this._maxConcurrency * 10 * 1000000000) + this._pageTimeout * 1000000) { // max concurrency * 10 secs + pageTimeout
-                    // reset the remaining analyzers which is not forceClosed, so they can try to finish
-                    for (let analyzer of analyzersNotForceClosed) {
-                        analyzer._resetActionTimer();
-                    }
-                    try {
-                        let error = createBaseError(analyzer._url);
-                        error.errorType = 'forceClose';
-                        error.error = `The analyzer for ${analyzer._url} has been inactive for ${analyzer.timeElapsedSinceLastActivityNs() / 1000000n}ms`;
-                        let json = JSON.stringify(error);
-                        await this._writeFileHandle(this._errorLogFile, json + '\n');
-
-                        if (config.debug) {
-                            console.error(json);
+                    if (analyzer.timeElapsedSinceLastActivityNs() > (this._maxConcurrency * 10 * 1000000000) + this._pageTimeout * 1000000) { // max concurrency * 10 secs + pageTimeout
+                        // reset the remaining analyzers which is not forceClosed, so they can try to finish
+                        for (let analyzer of analyzersNotForceClosed) {
+                            analyzer._resetActionTimer();
                         }
 
-                        try {
-                            /*
-                            * try to make the hanging puppeteer promise throw and error in PageAnalyzer.
-                            * Sometimes a faulty page makes puppeteer page.screenshot() and page.evaluate() hang forever
-                            * */
-                            await analyzer.forceClose(); // sets the _forceClosed flag
-                        } catch(e) {
-                            //no-op
                             if (config.debug) {
-                                console.error(`Could not force Close inactive analyzer for ${analyzer._url}.`, e);
+                                console.error(`The analyzer for ${analyzer._url} has been inactive for ${analyzer.timeElapsedSinceLastActivityNs() / 1000000n}ms, trying to forceClose it to provoke an exception`);
                             }
-                        }
-                    } catch (e) {
-                        console.error(e); // should never happen
+
+                            try {
+                                /*
+                                * try to make the hanging puppeteer promise throw and error in PageAnalyzer.
+                                * Sometimes a faulty page or a lost connection from puppeteer to the browser (maybe crashed because of faulty page)
+                                * makes puppeteer page.screenshot() and page.evaluate() hang forever
+                                * OBS. lost connection will be retried in _runAnalysis so in most cases the analyzer will succeed after this
+                                * */
+                                await analyzer.forceClose(); // sets the _forceClosed flag
+                            } catch(e) {
+                                //no-op
+                                if (config.debug) {
+                                    console.error(`Could not force Close inactive analyzer for ${analyzer._url}.`, e);
+                                }
+                            }
+
                     }
                 }
+            } catch (e) {
+                console.error(e); // should never happen
             }
 
         }, 10000); // every 10 seconds
@@ -318,7 +314,7 @@ class WebExtractor {
 
     async _browserInstance() {
         try {
-            await this._browserInstanceLock.acquireAsync(); // we are accessing shared properties are doing async work and can be accessed by multiple async functions
+            await this._browserInstanceLock.acquireAsync(); // we are accessing shared properties, are doing async work (can span multiple ticks) and can be accessed by multiple async functions
             if (this._browserCloseRequired) {
                 await this._close();
             }
