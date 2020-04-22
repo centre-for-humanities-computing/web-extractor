@@ -15,6 +15,7 @@ const optDesc = {
     concurrency: `The maximum simultaneous loaded web pages`,
     noScreenshot: `Disable screenshots`,
     pageTimeout: `Milliseconds to wait for the initial loading of a page`,
+    headless: `run the browser in headless mode`,
     useIdForScreenshotName: `Use an universal unique id for screenshot names instead of the url`,
     debug: 'Print more detailed error information'
 
@@ -29,6 +30,7 @@ async function run() {
         cli.option('-c, --concurrency <integer>', optDesc.concurrency, WebExtractor.DEFAULT_OPTIONS.maxConcurrency);
         cli.option('-n, --no-screenshot', optDesc.noScreenshot);
         cli.option('-t, --page-timeout <integer>', optDesc.pageTimeout, WebExtractor.DEFAULT_OPTIONS.pageTimeoutMs);
+        cli.option('-h, --headless <boolean', optDesc.headless, WebExtractor.DEFAULT_OPTIONS.headless);
         cli.option('-i, --use-id-for-screenshot-name', optDesc.useIdForScreenshotName, WebExtractor.DEFAULT_OPTIONS.useIdForScreenshotName);
         cli.option('-x, --debug', optDesc.debug, false);
 
@@ -40,6 +42,7 @@ async function run() {
         let concurrency = Math.max(1, parseIntOrThrow(cli.concurrency));
         let takeScreenshot = cli.screenshot;
         let pageTimeout = Math.max(1, parseIntOrThrow(cli.pageTimeout));
+        let headless = cli.headless;
         let useIdForScreenshotName = cli.useIdForScreenshotName;
         let debug = cli.debug;
 

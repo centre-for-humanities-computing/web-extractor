@@ -15,7 +15,7 @@ class WebExtractorApi {
      * @param destDir the destination dir for extracted data and screenshots
      * @param options additional settings see the readme file
      */
-    constructor(urls, rules, destDir, options) {
+    constructor(urls, rules, destDir, options = {}) {
         this._executed = false;
         this._urls = urls;
         this._rules = rules;

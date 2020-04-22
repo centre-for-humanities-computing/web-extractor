@@ -270,7 +270,7 @@ class PageAnalyzer {
 
     async close() {
         let error;
-        if (this._page) {
+        if (this._page && !this._page.isClosed()) {
             let page = this._page;
             this._page = null;
             try {

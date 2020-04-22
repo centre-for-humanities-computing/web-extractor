@@ -20,6 +20,7 @@ const DEFAULT_OPTIONS = Object.freeze({
     useIdForScreenshotName: false,
     maxConcurrency: 15,
     pageTimeoutMs: 90000,
+    headless: true,
     output: {
         screenshot: true,
         logs: true,
@@ -62,6 +63,7 @@ class WebExtractor {
         this._useIdForScreenshotName = options.useIdForScreenshotName;
         this._maxConcurrency = options.maxConcurrency;
         this._pageTimeout = options.pageTimeoutMs;
+        this._headless = options.headless;
         this._queue = this._createQueue();
         this._eventEmitter = new EventEmitter();
         this._closeLock = new AwaitLock();
@@ -84,7 +86,9 @@ class WebExtractor {
         }
         this._executed = true;
         // mkdir if not exists
-        await fs.mkdir(this._destDir, {recursive: true});
+        if (this._takeScreenshot || this._saveData || this._saveLogs) {
+            await fs.mkdir(this._destDir, {recursive: true});
+        }
         if (this._takeScreenshot) {
             await fs.mkdir(path.join(this._destDir, 'screenshots'), {recursive: true});
         }
@@ -319,7 +323,7 @@ class WebExtractor {
                 await this._close();
             }
             if (!this._browser) {
-                this._browser = await puppeteer.launch({headless: true, defaultViewport: {width: 1024, height: 1024},
+                this._browser = await puppeteer.launch({headless: this._headless, defaultViewport: {width: 1024, height: 1024},
                     args: []});
                 this._browser.once('disconnected', () => this._browserCloseRequired = true);
             }

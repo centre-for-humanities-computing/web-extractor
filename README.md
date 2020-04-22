@@ -29,6 +29,7 @@ node extract -h
 - **`-c, --concurrency <integer>`** [optional, default=15] - The maximum simultaneous loaded pages
 - **`-n, --no-screenshot`** [optional] - Disable screenshots
 - **`-t, --page-timeout <integer>`** [optional, default=90000] - Milliseconds to wait for the initial loading of a page
+- **`-h, --headless`** [optional, default=true] - run browser on headless mode
 - **`-i, --use-id-for-screenshot-name`** [optional] - Use an universal unique id for screenshot names instead of the url
 - **`-x, --debug`** [optional] - Print more detailed error information
 
@@ -93,6 +94,7 @@ a string in JSON-format.
         useIdForScreenshotName: {boolean} default false,
         maxConcurrency: {integer} default 15,
         pageTimeoutMs: {integer} default 90000,
+        headless: {boolean} default true,
         output: {
             screenshot: {boolean} default true,
             logs: {boolean} default true,
