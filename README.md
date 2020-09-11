@@ -163,6 +163,7 @@ structure:
 module.exports = {
     name: 'name of the rule', //required
 
+    init: async function() {} // optional
     dataTemplate: function() {} // optional
     
     extractor: {
@@ -178,7 +179,7 @@ module.exports = {
 The name of the rule or some other name identifying the extracted data. If only one rule is used the name can be omitted.
 
 ##### init(options) \<async>
-- `options` - an object with relevant config data from the extractor:
+- `options` - an object with relevant config data for the extractor:
  
   - ```
     {
