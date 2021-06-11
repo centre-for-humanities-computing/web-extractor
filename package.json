@@ -19,14 +19,14 @@
   "dependencies": {
     "await-lock": "^2.0.1",
     "commander": "^4.1.1",
-    "delay": "^4.3.0",
-    "filenamify-url": "^2.1.1",
+    "delay": "^4.4.1",
+    "filenamify-url": "^2.1.2",
     "fkill": "^6.2.0",
     "line-reader": "latest",
-    "lodash": "^4.17.15",
-    "p-queue": "^6.3.0",
+    "lodash": "^4.17.21",
+    "p-queue": "^6.6.2",
     "puppeteer": "^2.1.1",
     "single-line-log": "^1.1.2",
-    "uniqid": "^5.2.0"
+    "uniqid": "^5.3.0"
   }
 }
