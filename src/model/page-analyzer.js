@@ -53,8 +53,6 @@ class PageAnalyzer {
         this._screenshotCounter = 1;
         this._errorCaught = false;
         this._extractPromiseReject = null;
-
-        console.log(userAgent)
     }
 
     /**
