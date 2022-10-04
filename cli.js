@@ -1,12 +1,14 @@
-const fs = require('fs').promises;
-const WebExtractor = require('./src/model/web-extractor');
-const path = require('path');
-const urlUtil = require('./src/util/url-util');
-const ruleUtil = require('./src/util/rule-util');
-const cli = require('commander');
-const config = require('./src/config');
-const _ = require('lodash');
-const singleLineLog = require('single-line-log').stdout;
+import fs from 'fs/promises';
+import { WebExtractor } from './src/model/web-extractor.js';
+import path from 'path';
+import * as urlUtil from './src/util/url-util.js';
+import * as ruleUtil from './src/util/rule-util.js';
+import cli from 'commander';
+import config from './src/config.js';
+import _ from 'lodash';
+import * as slg from 'single-line-log';
+
+const singleLineLog = slg.stdout;
 
 const optDesc = {
     urls: `A path to a file with a list of urls for extraction. Each url should be on it's own line`,
