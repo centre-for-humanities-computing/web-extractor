@@ -58,6 +58,7 @@ class WebExtractorApi {
         if (progressionListener) {
             webExtractor.addProgressionListener(progressionListener);
         }
+
         if (this._options.printProgression) {
             webExtractor.addProgressionListener((progress) => {
                 let line = `pending: ${progress.pending}, completed: ${progress.completed}, failed: ${progress.failed}, total: ${progress.total}\n`;
@@ -85,4 +86,4 @@ class WebExtractorApi {
     }
 }
 
-export { WebExtractorApi };
+export { WebExtractorApi, WebExtractor };
