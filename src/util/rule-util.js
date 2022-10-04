@@ -19,7 +19,7 @@ export async function getRules(dir) {
         if (filename.endsWith('.js')) {
             if (!filename.startsWith('__')) {
                 let rule = await import(pathToFileURL(path.join(dir, filename)));
-                rules.push(rule);
+                rules.push(rule.default);
             } else {
                 rulesIgnoredCount++;
             }
