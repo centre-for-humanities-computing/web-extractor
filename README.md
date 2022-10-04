@@ -53,7 +53,7 @@ npm install @chcaa/web-extractor
 To get started with some simple extractions, create a simple rule (see [Extraction Rules](#extraction-rules)) 
 and do the following:
 ```
-const WebExtractor = require('@chcaa/web-extractor');
+import { WebExtractor } from '@chcaa/web-extractor';
 
 async function run() {
     let urls = ['https://www.dr.dk', 'tv2.dk'];
@@ -160,7 +160,7 @@ Each rule is a node.js module with the following
 structure:
 
 ```
-module.exports = {
+export default {
     name: 'name of the rule', //required
 
     init: async function() {} // optional

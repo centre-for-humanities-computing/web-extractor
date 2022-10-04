@@ -1,5 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
+import { pathToFileURL } from "url";
 import _ from 'lodash';
 import config from '../config.js';
 
@@ -17,7 +18,8 @@ export async function getRules(dir) {
     for (let filename of filenames) {
         if (filename.endsWith('.js')) {
             if (!filename.startsWith('__')) {
-                let rule = require(path.join(dir, filename));
+                let rule = await import(pathToFileURL(path.join(dir, filename)));
+                console.log(rule)
                 rules.push(rule);
             } else {
                 rulesIgnoredCount++;
@@ -45,7 +47,7 @@ export async function getRules(dir) {
  */
 export function validateRules(rules) {
   for (let rule of rules) {
-      if (!(rule instanceof  Object)) {
+      if (!_.isObject(rule)) {
           throw new Error('A rule must be an object. ${rule} is not an object.');
       }
       if (rule.dataTemplate !== undefined && typeof rule.dataTemplate !== 'function') {

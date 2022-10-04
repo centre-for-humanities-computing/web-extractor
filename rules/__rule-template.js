@@ -1,4 +1,4 @@
-//let template = require('__data-template-example');
+// import template from './__data-template-example.js';
 
 const template = {
     html: null,
@@ -6,7 +6,7 @@ const template = {
     preselectedValues: true
 };
 
-module.exports = {
+export default {
     name: 'test', //optional
 
     /**
