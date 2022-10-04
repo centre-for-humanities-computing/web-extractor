@@ -1,9 +1,9 @@
-const _ = require('lodash');
-const fsStandard = require('fs');
-const fs = require('fs').promises;
-const path = require('path');
-const cli = require('commander');
-const lineReader = require('line-reader');
+import _ from 'lodash';
+import fsStandard from 'fs';
+import fs from 'fs/promises';
+import path from 'path';
+import * as cli from 'commander';
+import * as lineReader from 'line-reader';
 
 function extractProperties(object, properties) {
     let res = {};

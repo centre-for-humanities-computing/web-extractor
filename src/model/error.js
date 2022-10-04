@@ -40,8 +40,8 @@ class AbandonedError extends Error {
     }
 }
 
-module.exports = {
-    AbandonedError: AbandonedError,
-    HttpError: HttpError,
-    NullError: NullError
+export {
+    AbandonedError,
+    HttpError,
+    NullError
 };

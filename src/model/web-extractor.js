@@ -1,26 +1,29 @@
-const {default: PQueue} = require('p-queue');
-const PageAnalyzer = require('./page-analyzer');
-const uniqid = require('uniqid');
-const filenamifyUrl = require('filenamify-url');
-const EventEmitter = require('events').EventEmitter;
-const _ = require('lodash');
-const fs = require('fs').promises;
-const fsStandard = require('fs');
-const path = require('path');
-const errors = require('./error');
-const puppeteer = require('puppeteer');
-const fkill = require('fkill');
-const AwaitLock = require('await-lock').default;
-const FileHandleWriteLock = require('../util/file-handle-write-lock');
-const config = require('../config');
-const urlUtil = require('../util/url-util');
+import  PQueue from 'p-queue';
+import { PageAnalyzer } from './page-analyzer.js';
+import uniqid from 'uniqid';
+import filenamifyUrl from 'filenamify-url';
+import { EventEmitter } from 'events';
+import _ from 'lodash';
+import fs from 'fs/promises';
+import fsStandard from 'fs';
+import path from 'path';
+import * as errors from './error.js';
+import puppeteer from 'puppeteer';
+import fkill from 'fkill';
+import awaitLockModule from 'await-lock';
+const AwaitLock = awaitLockModule.default;
+import { FileHandleWriteLock } from '../util/file-handle-write-lock.js';
+import config from '../config.js';
+import * as urlUtil from '../util/url-util.js';
 
+const DEFAULT_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36';
 
 const DEFAULT_OPTIONS = Object.freeze({
     useIdForScreenshotName: false,
     maxConcurrency: 15,
     pageTimeoutMs: 90000,
     headless: true,
+    userAgent: DEFAULT_USER_AGENT,
     output: {
         screenshot: true,
         logs: true,
@@ -64,6 +67,7 @@ class WebExtractor {
         this._maxConcurrency = options.maxConcurrency;
         this._pageTimeout = options.pageTimeoutMs;
         this._headless = options.headless;
+        this._userAgent = options.userAgent;
         this._queue = this._createQueue();
         this._eventEmitter = new EventEmitter();
         this._closeLock = new AwaitLock();
@@ -192,7 +196,7 @@ class WebExtractor {
         let url = urlUtil.unwrapUrl(userUrl);
         let analyzer = null;
         try {
-            analyzer = new PageAnalyzer(userUrl, this._rules, this._pageTimeout);
+            analyzer = new PageAnalyzer(userUrl, this._rules, this._pageTimeout, this._userAgent);
             this._activePageAnalyzers.add(analyzer);
 
             let id = uniqid();
@@ -358,4 +362,4 @@ function padDatePart(part) {
 
 WebExtractor.DEFAULT_OPTIONS = DEFAULT_OPTIONS;
 
-module.exports = WebExtractor;
+export { WebExtractor };

@@ -1,5 +1,6 @@
-const fs = require('fs').promises;
-const AwaitLock = require('await-lock').default;
+import fs from 'fs/promises';
+import awaitLockModule from 'await-lock';
+const AwaitLock = awaitLockModule.default;
 
 /**
  * Using fs.promises.FileHandle's write method
@@ -76,7 +77,7 @@ class FileHandleWriteLock {
     }
 }
 
-module.exports = FileHandleWriteLock;
+export { FileHandleWriteLock };
 
 
 

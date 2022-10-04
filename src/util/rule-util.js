@@ -1,14 +1,14 @@
-const fs = require('fs').promises;
-const path = require('path');
-const _ = require('lodash');
-const config = require('../config');
+import fs from 'fs/promises';
+import path from 'path';
+import _ from 'lodash';
+import config from '../config.js';
 
 /**
  * Load the rules, prepare and validate them
  * @param dir
  * @returns {Promise<[]>}
  */
-module.exports.getRules = async function(dir) {
+export async function getRules(dir) {
     let rules = [];
     let filenames = await fs.readdir(dir);
     filenames.sort();
@@ -44,7 +44,7 @@ module.exports.getRules = async function(dir) {
  * Throws an Error if rules are not valid
  * @param rules
  */
-module.exports.validateRules = validateRules = function(rules) {
+export function validateRules(rules) {
   for (let rule of rules) {
       if (!(rule instanceof  Object)) {
           throw new Error('A rule must be an object. ${rule} is not an object.');
@@ -86,7 +86,7 @@ module.exports.validateRules = validateRules = function(rules) {
   }
 };
 
-module.exports.initRules = async function(rules, initOptions) {
+export async function initRules(rules, initOptions) {
     for (let rule of rules) {
         if (rule.init) {
             await rule.init(initOptions);
@@ -94,7 +94,7 @@ module.exports.initRules = async function(rules, initOptions) {
     }
 };
 
-module.exports.prepareRules = prepareRules = function(rules) {
+export function prepareRules(rules) {
     for (let rule of rules) {
         prepareRule(rule);
     }

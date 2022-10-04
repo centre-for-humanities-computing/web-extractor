@@ -1,12 +1,16 @@
-const WebExtractor = require('../src/model/web-extractor');
-const path = require('path');
-const urlUtil = require('../src/util/url-util');
-const ruleUtil = require('../src/util/rule-util');
-const config = require('../src/config');
+import { WebExtractor } from '../src/model/web-extractor.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import * as urlUtil from '../src/util/url-util.js';
+import * as ruleUtil from '../src/util/rule-util.js';
+import config from '../src/config.js';
 
-let destDir = 'd:/temp/cmp-temp';
+let destDir = 'd:/temp/web-extractor-temp-test';
 //let urlsPath = path.join(destDir, 'top10Kfor29EUcountries.txt');
 //let urlsPath = path.join(destDir, 'stall-test2.txt');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 let urlsPath = path.join(__dirname, 'urls-test.txt');
 let maxConcurrency = 15;
 
@@ -24,6 +28,7 @@ async function demo() {
     }
 
     let options = {
+        userAgent: undefined, // if undefined a default will be used
         output: {
             screenshot: true
         },

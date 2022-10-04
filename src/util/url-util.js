@@ -1,7 +1,7 @@
-const fs = require('fs').promises;
-const _ = require('lodash');
+import fs from 'fs/promises';
+import _  from 'lodash';
 
-module.exports.getUrls = async function(file) {
+export async function getUrls(file) {
     let content = await fs.readFile(file, 'utf8');
     content = content.replace(/\r\n/, '\n').replace(/\r/, '\n');
     let urls = content.split('\n')
@@ -18,7 +18,7 @@ module.exports.getUrls = async function(file) {
  * Throws Error if urls is not valid
  * @param urls
  */
-module.exports.validateUrls = validateUrls = function(urls) {
+export function validateUrls(urls) {
     for (let i = 0; i < urls.length; i++) {
         let actualUrl = unwrapUrl(urls[i]);
         if (actualUrl === undefined) {
@@ -27,7 +27,7 @@ module.exports.validateUrls = validateUrls = function(urls) {
     }
 };
 
-module.exports.unwrapUrl = unwrapUrl = function(urlLike) {
+export function unwrapUrl(urlLike) {
     if (_.isString(urlLike)) {
         return urlLike;
     }

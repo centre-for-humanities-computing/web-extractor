@@ -1,9 +1,9 @@
-const error = require('./error');
-const _ = require('lodash');
-const path = require('path');
-const puppeteer = require('puppeteer');
-const config = require('../config');
-const urlUtil = require('../util/url-util');
+import * as error from './error.js';
+import _ from 'lodash';
+import path from 'path';
+import puppeteer from 'puppeteer';
+import config from '../config.js';
+import * as urlUtil from '../util/url-util.js';
 
 const PROTOCOL_REGEX = /^https?:\/\//;
 const CHROME_ARGS = ['--ignore-certificate-errors']; // still doesn't seem to work in headless mode and neither does ignoreHTTPSErrors below
@@ -44,14 +44,17 @@ const requestStrategies = [
 
 class PageAnalyzer {
 
-    constructor(userUrl, rules, pageTimeout) {
+    constructor(userUrl, rules, pageTimeout, userAgent) {
         this._url = urlUtil.unwrapUrl(userUrl);
         this._userUrl = userUrl;
         this._rules = rules;
         this._pageTimeout = pageTimeout;
+        this._userAgent = userAgent;
         this._screenshotCounter = 1;
         this._errorCaught = false;
         this._extractPromiseReject = null;
+
+        console.log(userAgent)
     }
 
     /**
@@ -345,4 +348,4 @@ function nextRequestStrategyIndexForError(currentIndex, error, url) {
     return -1;
 }
 
-module.exports = PageAnalyzer;
+export { PageAnalyzer };

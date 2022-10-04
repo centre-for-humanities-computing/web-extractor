@@ -1,10 +1,12 @@
-const WebExtractor = require('./model/web-extractor');
-const errors = require('./model/error');
-const config = require('./config');
-const urlUtil = require('./util/url-util');
-const ruleUtil = require('./util/rule-util');
-const singleLineLog = require('single-line-log').stdout;
-const _ = require('lodash');
+import { WebExtractor } from './model/web-extractor.js';
+import * as errors from './model/error.js';
+import config from './config.js';
+import * as urlUtil from './util/url-util.js';
+import * as ruleUtil from './util/rule-util.js';
+import * as slg from 'single-line-log';
+import _ from 'lodash';
+
+const singleLineLog = slg.stdout;
 
 class WebExtractorApi {
 
@@ -83,4 +85,4 @@ class WebExtractorApi {
     }
 }
 
-module.exports = WebExtractorApi;
+export { WebExtractorApi };
