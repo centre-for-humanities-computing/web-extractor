@@ -86,4 +86,4 @@ class WebExtractorApi {
     }
 }
 
-export { WebExtractorApi, WebExtractor };
+export { WebExtractorApi, WebExtractor, ruleUtil };

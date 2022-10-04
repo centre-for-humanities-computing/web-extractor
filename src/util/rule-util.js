@@ -22,7 +22,6 @@ export async function getRules(dir) {
             } else {
                 rulesIgnoredCount++;
             }
-
         }
     }
 
@@ -38,7 +37,7 @@ export async function getRules(dir) {
     }
 
     return rules;
-};
+}
 
 /**
  * Throws an Error if rules are not valid
@@ -84,7 +83,7 @@ export function validateRules(rules) {
           }
       }
   }
-};
+}
 
 export async function initRules(rules, initOptions) {
     for (let rule of rules) {
@@ -92,13 +91,13 @@ export async function initRules(rules, initOptions) {
             await rule.init(initOptions);
         }
     }
-};
+}
 
 export function prepareRules(rules) {
     for (let rule of rules) {
         prepareRule(rule);
     }
-};
+}
 
 function prepareRule(rule) {
     if (rule.extractor && !_.isArray(rule.extractor)) {
