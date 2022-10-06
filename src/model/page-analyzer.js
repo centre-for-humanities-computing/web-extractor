@@ -92,7 +92,7 @@ class PageAnalyzer {
                     this._errorCaught = e;
                 });
 
-                await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:72.0) Gecko/20100101 Firefox/72.0');
+                await page.setUserAgent(this._userAgent);
 
                 await page.setDefaultNavigationTimeout(this._pageTimeout);
                 await page.setDefaultTimeout(this._pageTimeout);
