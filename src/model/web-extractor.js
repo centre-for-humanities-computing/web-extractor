@@ -26,7 +26,9 @@ const DEFAULT_OPTIONS = Object.freeze({
     userAgent: DEFAULT_USER_AGENT,
     output: {
         screenshot: true,
-        logs: true,
+        logs: { // set to false if logs should be disabled
+            stackTrace: true
+        },
         data: true
     }
 });
@@ -62,7 +64,8 @@ class WebExtractor {
         this._executed = false;
         this._takeScreenshot = options.output.screenshot;
         this._saveData = options.output.data;
-        this._saveLogs = options.output.logs;
+        this._saveLogs = !!options.output.logs;
+        this._logsIncludeStackTrace = !!options.output?.logs?.stackTrace;
         this._useIdForScreenshotName = options.useIdForScreenshotName;
         this._maxConcurrency = options.maxConcurrency;
         this._pageTimeout = options.pageTimeoutMs;
@@ -268,7 +271,9 @@ class WebExtractor {
             } else {
                 error.errorType = 'internal';
                 error.error = e.toString();
-                error.stack = e.stack;
+                if (this._logsIncludeStackTrace) {
+                    error.stack = e.stack;
+                }
             }
             let json = JSON.stringify(error);
             await this._writeFileHandle(this._errorLogFile, json + '\n');
