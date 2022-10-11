@@ -35,6 +35,11 @@ const requestStrategies = [
             return false;
         }
     },
+
+    // if the problem arises where http does not work but https does, the rule should be
+    // if !urlHasProtocol and error === x,y,z then we try adding https, it should be after the current rules
+    // if that doesn't work, we can add yet another rule that tries to add www. alias with https:// as a 4th rule
+
     /* //TODO, test if this makes a difference when we already have ignoreHTTPSErrors: true in web-extractor launch args
     { // sometimes response is null when redirected to https, try again with https if no user specified protocol
         name: 'protocolHttps',
