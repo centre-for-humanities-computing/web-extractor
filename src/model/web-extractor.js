@@ -1,4 +1,4 @@
-import  PQueue from 'p-queue';
+import PQueue from 'p-queue';
 import { PageAnalyzer } from './page-analyzer.js';
 import uniqid from 'uniqid';
 import filenamifyUrl from 'filenamify-url';
@@ -11,6 +11,7 @@ import * as errors from './error.js';
 import puppeteer from 'puppeteer';
 import fkill from 'fkill';
 import awaitLockModule from 'await-lock';
+
 const AwaitLock = awaitLockModule.default;
 import { FileHandleWriteLock } from '../util/file-handle-write-lock.js';
 import config from '../config.js';
@@ -76,7 +77,7 @@ class WebExtractor {
         this._closeLock = new AwaitLock();
         this._browserInstanceLock = new AwaitLock();
         this._activePageAnalyzers = new Set();
-        this._progression = {total: urls.length, completed: 0, failed: 0, pending: urls.length};
+        this._progression = { total: urls.length, completed: 0, failed: 0, pending: urls.length };
     }
 
     addProgressionListener(listener) {
@@ -94,10 +95,10 @@ class WebExtractor {
         this._executed = true;
         // mkdir if not exists
         if (this._takeScreenshot || this._saveData || this._saveLogs) {
-            await fs.mkdir(this._destDir, {recursive: true});
+            await fs.mkdir(this._destDir, { recursive: true });
         }
         if (this._takeScreenshot) {
-            await fs.mkdir(path.join(this._destDir, 'screenshots'), {recursive: true});
+            await fs.mkdir(path.join(this._destDir, 'screenshots'), { recursive: true });
         }
 
         // open files
@@ -129,24 +130,24 @@ class WebExtractor {
                             analyzer._resetActionTimer();
                         }
 
-                            if (config.debug) {
-                                console.error(`The analyzer for ${analyzer._url} has been inactive for ${analyzer.timeElapsedSinceLastActivityNs() / 1000000n}ms, trying to forceClose it to provoke an exception`);
-                            }
+                        if (config.debug) {
+                            console.error(`The analyzer for ${analyzer._url} has been inactive for ${analyzer.timeElapsedSinceLastActivityNs() / 1000000n}ms, trying to forceClose it to provoke an exception`);
+                        }
 
-                            try {
-                                /*
-                                * try to make the hanging puppeteer promise throw and error in PageAnalyzer.
-                                * Sometimes a faulty page or a lost connection from puppeteer to the browser (maybe crashed because of faulty page)
-                                * makes puppeteer page.screenshot() and page.evaluate() hang forever
-                                * OBS. lost connection will be retried in _runAnalysis so in most cases the analyzer will succeed after this
-                                * */
-                                await analyzer.forceClose(); // sets the _forceClosed flag
-                            } catch(e) {
-                                //no-op
-                                if (config.debug) {
-                                    console.error(`Could not force Close inactive analyzer for ${analyzer._url}.`, e);
-                                }
+                        try {
+                            /*
+                            * try to make the hanging puppeteer promise throw and error in PageAnalyzer.
+                            * Sometimes a faulty page or a lost connection from puppeteer to the browser (maybe crashed because of faulty page)
+                            * makes puppeteer page.screenshot() and page.evaluate() hang forever
+                            * OBS. lost connection will be retried in _runAnalysis so in most cases the analyzer will succeed after this
+                            * */
+                            await analyzer.forceClose(); // sets the _forceClosed flag
+                        } catch (e) {
+                            //no-op
+                            if (config.debug) {
+                                console.error(`Could not force Close inactive analyzer for ${analyzer._url}.`, e);
                             }
+                        }
 
                     }
                 }
@@ -220,7 +221,7 @@ class WebExtractor {
                 try {
                     res = await analyzer.extractData(browser, screenshotInfo);
                     break;
-                } catch(e) {
+                } catch (e) {
                     if (!browser.isConnected() && retryCount <= 2) { // retry on disconnected browser
                         retryCount++;
                         browser = await this._browserInstance();
@@ -286,7 +287,7 @@ class WebExtractor {
     }
 
     _createQueue() {
-        return new PQueue({concurrency: this._maxConcurrency});
+        return new PQueue({ concurrency: this._maxConcurrency });
     }
 
     async _writeFileHandle(handle, data) {
@@ -331,9 +332,13 @@ class WebExtractor {
             if (this._browserCloseRequired) {
                 await this._close();
             }
+
             if (!this._browser) {
-                this._browser = await puppeteer.launch({headless: this._headless, defaultViewport: {width: 1024, height: 1024},
-                    args: []});
+                this._browser = await puppeteer.launch({
+                    headless: this._headless,
+                    ignoreHTTPSErrors: true,
+                    defaultViewport: { width: 1024, height: 1024 }
+                });
                 this._browser.once('disconnected', () => this._browserCloseRequired = true);
             }
             return this._browser;
@@ -349,7 +354,7 @@ class WebExtractor {
 }
 
 function createBaseError(url) {
-   return {
+    return {
         timestamp: (new Date()).toISOString(),
         url: url
     };

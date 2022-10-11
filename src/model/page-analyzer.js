@@ -4,25 +4,42 @@ import path from 'path';
 import puppeteer from 'puppeteer';
 import config from '../config.js';
 import * as urlUtil from '../util/url-util.js';
+import { HttpError } from "./error.js";
 
 const PROTOCOL_REGEX = /^https?:\/\//;
-const CHROME_ARGS = ['--ignore-certificate-errors']; // still doesn't seem to work in headless mode and neither does ignoreHTTPSErrors below
 
 const requestStrategies = [
     { // default request
         name: 'primary', //if no protocol use http, wait for document load event
-        fetch: async function(page, url) {
-            return await page.goto(getUrl(url, 'http'), {waitUntil: ['load'], ignoreHTTPSErrors: true, args: CHROME_ARGS});
+        fetch: async function (page, url) {
+            return await page.goto(getUrl(url, 'http'), { waitUntil: ['load'] });
         },
-        canSolveError: function(error, url) {
+        canSolveError: function (error, url) {
             return false;
         }
     },
-    /* //TODO, test if this makes a difference when we already have ignoreHTTPSErrors: true
+    { // default request
+        name: 'www-alias',
+        fetch: async function (page, url) {
+            return await page.goto(getUrl('www.' + url, 'http'), { waitUntil: ['load'] });
+        },
+        canSolveError: function (error, url) {
+            if (!urlHasProtocol(url) && !urlStartsWithWww(url)) {
+                if (error instanceof HttpError && error.statusCode === 504) {
+                    return true;
+                } else if (errorMessageIncludes(error, ['ERR_CONNECTION_RESET', 'ERR_NAME_NOT_RESOLVED', 'ERR_CONNECTION_TIMED_OUT'])) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    },
+    /* //TODO, test if this makes a difference when we already have ignoreHTTPSErrors: true in web-extractor launch args
     { // sometimes response is null when redirected to https, try again with https if no user specified protocol
         name: 'protocolHttps',
         fetch: async function(page, url) {
-            return await page.goto(getUrl(url,'https'), {waitUntil: ['load'], ignoreHTTPSErrors: true, args: CHROME_ARGS});
+            return await page.goto(getUrl(url,'https'), {waitUntil: ['load'] });
         },
         canSolveError: function (error, url) {
             return (error instanceof error.NullError) && !urlHasProtocol(url);
@@ -32,7 +49,7 @@ const requestStrategies = [
     { // sometimes load is never reached because of some js popup etc. try to fallback to domcontentloaded
         name: 'domContentLoaded',
         fetch: async function(page, url) {
-            return await page.goto(getUrl(url,'http'), {waitUntil: ['domcontentloaded'], ignoreHTTPSErrors: true, args: CHROME_ARGS});
+            return await page.goto(getUrl(url,'http'), {waitUntil: ['domcontentloaded'] });
         },
         canSolveError: function(error, url) {
             return error instanceof puppeteer.errors.TimeoutError;
@@ -99,14 +116,22 @@ class PageAnalyzer {
 
                 let response = null;
 
-                for (let i = 0; i < requestStrategies.length; i++) {
+                for (let i = 0; i < requestStrategies.length;) {
                     let strategy = requestStrategies[i];
                     try {
                         response = await strategy.fetch(page, this._url);
                         if (response === null) {
                             throw new error.NullError("Response was null");
                         }
+
+                        let statusCode = response.status();
+
+                        if (statusCode < 200 || statusCode > 226) {
+                            throw new error.HttpError(statusCode);
+                        }
+
                         result.requestStrategy = strategy.name;
+                        break;
                     } catch (e) {
                         let nextIndex = nextRequestStrategyIndexForError(i, e, this._url);
                         if (nextIndex < 0) {
@@ -120,14 +145,8 @@ class PageAnalyzer {
 
                 }
 
-                let statusCode = response.status();
-
-                if (statusCode < 200 ||statusCode > 226) {
-                    throw new error.HttpError(statusCode);
-                }
-
                 if (screenshotOptions) {
-                    await page.screenshot({path: this._getScreenshotPath(screenshotOptions.dirPath, screenshotOptions.imageName)});
+                    await page.screenshot({ path: this._getScreenshotPath(screenshotOptions.dirPath, screenshotOptions.imageName) });
                     this._resetActionTimerAndThrowIfErrorCaught();
                 }
 
@@ -154,7 +173,7 @@ class PageAnalyzer {
                                 this._resetActionTimerAndThrowIfErrorCaught();
 
                                 if (screenshotOptions && beforeExtractResponse.screenshot) {
-                                    await page.screenshot({path: this._getScreenshotPath(screenshotOptions.dirPath, screenshotOptions.imageName)});
+                                    await page.screenshot({ path: this._getScreenshotPath(screenshotOptions.dirPath, screenshotOptions.imageName) });
                                     this._resetActionTimerAndThrowIfErrorCaught();
                                 }
 
@@ -227,12 +246,13 @@ class PageAnalyzer {
                     }
                 }
                 resolve(result);
-            } catch(e) {
+            } catch (e) {
                 reject(e);
             } finally {
                 try {
                     await this.close();
-                } catch (e) {/* no-op */}
+                } catch (e) {/* no-op */
+                }
             }
         });
     }
@@ -334,6 +354,19 @@ function getUrl(url, defaultProtocol) {
 
 function urlHasProtocol(url) {
     return url.match(PROTOCOL_REGEX);
+}
+
+function urlStartsWithWww(url) {
+    return url.toLowerCase().startsWith('www');
+}
+
+function errorMessageIncludes(error, messageSnippets) {
+    for (let snippet of messageSnippets) {
+        if (error.message.includes(snippet)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 function nextRequestStrategyIndexForError(currentIndex, error, url) {

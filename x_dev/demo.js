@@ -11,7 +11,8 @@ let destDir = 'd:/temp/web-extractor-temp-test';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-let urlsPath = path.join(__dirname, 'urls-test.txt');
+// let urlsPath = path.join(__dirname, 'urls-test.txt');
+let urlsPath = path.join(__dirname, 'failing-urls.txt');
 let maxConcurrency = 15;
 
 config.debug = true;
@@ -20,7 +21,14 @@ async function demo() {
 
     //let rules = await ruleUtil.getRules(path.join(destDir, 'rules'));
 
-    let rules = await ruleUtil.getRules(path.join(__dirname, '../rules'));
+    //let rules = await ruleUtil.getRules(path.join(__dirname, '../rules'));
+    let rules = [{
+        extractor: {
+            extract: () => {
+                return true; // we accept all pages as a match
+            }
+        }
+    }];
     let urls = await urlUtil.getUrls(urlsPath);
 
     if (maxConcurrency > 10) {
@@ -35,6 +43,8 @@ async function demo() {
         maxConcurrency: maxConcurrency,
         pageTimeoutMs: 90000
     };
+
+    options.output = false;
 
     let cmpExtractor = new WebExtractor(urls, rules, destDir, options);
     cmpExtractor.addProgressionListener((progress) => {
