@@ -76,12 +76,12 @@ async function run() {
 run();
 ```
 
-### API
+### WebExtractor
 The following methods and properties are available:
 
 ##### constructor(urls, rules, destDir, [options])
 - `urls` - an array of urls or a path to a file with urls. (one url pr. line). If further input is needed along with
-the url the url can be and object with a property named `url` the object will the be passed in to relevant methods of
+the url, the url can be and object with a property named `url` the object will then be passed in to relevant methods of
 the extraction rules (see [Creating Rules](#creating-rules)). If the url's are located in a file each line can be
 a string in JSON-format.
 - `rules` - the dir where the extraction rules are located or a rule object or an array of rule objects 
@@ -99,7 +99,8 @@ a string in JSON-format.
             screenshot: {boolean} default true,
             logs: {boolean} default true,
             data: {boolean} default true
-        }
+        },
+        ruleInitOptions: {}, // options which should be passed to rules init() method
         printProgression: {boolean} default false
     }
     ```  
@@ -179,7 +180,7 @@ export default {
 The name of the rule or some other name identifying the extracted data. If only one rule is used the name can be omitted.
 
 ##### init(options) \<async>
-- `options` - an object with relevant config data for the extractor:
+- `options` - an object with relevant config data for the extractor. (see [WebExtractor](#WebExtractor) constructor `options.ruleInitOptions`):
  
   - ```
     {
