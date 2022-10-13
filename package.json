@@ -1,6 +1,6 @@
 {
   "name": "@chcaa/web-extractor",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Extract DOM content and take screenshots based on user defined rules",
   "main": "src/index.js",
   "type": "module",
