@@ -16,6 +16,7 @@ const AwaitLock = awaitLockModule.default;
 import { FileHandleWriteLock } from '../util/file-handle-write-lock.js';
 import config from '../config.js';
 import * as urlUtil from '../util/url-util.js';
+import { ruleUtil } from "../index.js";
 
 const DEFAULT_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36';
 
@@ -31,7 +32,8 @@ const DEFAULT_OPTIONS = Object.freeze({
             stackTrace: true
         },
         data: true
-    }
+    },
+    ruleInitOptions: {}
 });
 
 const FILE_NAMES = Object.freeze({
@@ -66,6 +68,7 @@ class WebExtractor {
         this._takeScreenshot = options.output.screenshot;
         this._saveData = options.output.data;
         this._saveLogs = !!options.output.logs;
+        this._ruleInitOptions = options.ruleInitOptions;
         this._logsIncludeStackTrace = !!options.output?.logs?.stackTrace;
         this._useIdForScreenshotName = options.useIdForScreenshotName;
         this._maxConcurrency = options.maxConcurrency;
@@ -200,7 +203,10 @@ class WebExtractor {
         let url = urlUtil.unwrapUrl(userUrl);
         let analyzer = null;
         try {
-            analyzer = new PageAnalyzer(userUrl, this._rules, this._pageTimeout, this._userAgent);
+            // make a new context for every page extraction making it is safe to store state using "this"  in the rule
+            let rulesAnalysisContexts = ruleUtil.createRulesAnalysisContexts(this._rules);
+            await ruleUtil.initRules(rulesAnalysisContexts, this._ruleInitOptions);
+            analyzer = new PageAnalyzer(userUrl, rulesAnalysisContexts, this._pageTimeout, this._userAgent);
             this._activePageAnalyzers.add(analyzer);
 
             let id = uniqid();

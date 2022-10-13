@@ -9,7 +9,7 @@ import config from '../config.js';
  * @param dir
  * @returns {Promise<[]>}
  */
-export async function getRules(dir) {
+export async function loadRules(dir) {
     let rules = [];
     let filenames = await fs.readdir(dir);
     filenames.sort();
@@ -86,9 +86,30 @@ export function validateRules(rules) {
   }
 }
 
+export function createRulesAnalysisContexts(rules) {
+    let contexts = [];
+    for (let i = 0; i < rules.length; i++) {
+        let rule = rules[i];
+        if (rule['__analysisContext']) {
+            throw new Error(`The rule at index ${i} is already an analysisContext use the original rule as input`);
+        }
+        let analysisContext = Object.create(rule);
+        analysisContext.__analysisContext = true;
+        contexts.push(analysisContext);
+    }
+    return contexts;
+}
+
 export async function initRules(rules, initOptions) {
     for (let rule of rules) {
+        if (!rule['__analysisContext']) {
+            throw new Error('Can only init rules which is created with createRulesAnalysisContexts() use this method to create the rules to init');
+        }
+        if (rule['__initialized']) {
+            throw new Error('The rule is already initialized and cannot be reused. Create a new rule-context using createRulesAnalysisContexts');
+        }
         if (rule.init) {
+            rule.__initialized = true;
             await rule.init(initOptions);
         }
     }

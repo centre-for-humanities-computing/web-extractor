@@ -54,8 +54,7 @@ async function run() {
             rulesDir = path.join(__dirname, 'rules');
         }
 
-        let rules = await ruleUtil.getRules(rulesDir);
-        await ruleUtil.initRules(rules, {destDir: destDir});
+        let rules = await ruleUtil.loadRules(rulesDir);
         let urls = await urlUtil.getUrls(urlsPath);
 
         if (concurrency > 10) {
@@ -68,7 +67,8 @@ async function run() {
             },
             maxConcurrency: concurrency,
             pageTimeoutMs: pageTimeout,
-            useIdForScreenshotName: useIdForScreenshotName
+            useIdForScreenshotName: useIdForScreenshotName,
+            ruleInitOptions: { destDir }
         };
 
         let start = Date.now();

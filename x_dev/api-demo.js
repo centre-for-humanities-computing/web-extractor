@@ -19,8 +19,12 @@ async function run() {
     WebExtractorApi.debug(true);
 
     try {
-        let webExtractor = new WebExtractorApi(urlsPath, rule, destDir, {maxConcurrency: 15, printProgression: false});
-        await webExtractor.execute()
+        let webExtractor = new WebExtractorApi(urlsPath, rule, destDir, {
+            maxConcurrency: 15,
+            printProgression: false,
+            ruleInitOptions: { destDir }
+        });
+        await webExtractor.execute();
     } catch (e) {
         console.error(e);
     }

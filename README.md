@@ -149,7 +149,7 @@ Rules defines what should be extracted from given web-page as well as when the e
 Each rule is tested one by one in alphabetical order until a match is found. 
 In the event of a match the result is saved and any remaining rules are aborted.
 
-If no `rules` path is passed in the rules (if any) located in the `rules` directory of the project, will be used.
+If no `rules` path is passed in, the rules (if any) located in the `rules` directory of the project, will be used.
 
 ### Disabling and Deleting Rules
 A rule can be temporarily disabled by prefixing the file name with double underscore e.g. `__cookiebot.js`. To completely
@@ -189,11 +189,13 @@ The name of the rule or some other name identifying the extracted data. If only 
 
 Returns: `Promise<undefined>`
 
-If defined this method will be called once before any extraction takes place. 
+If defined this method will be called before each new url extraction begins. 
 
-Can be used for initializing the rule or other preparations which should take place before 
+Can be used for initializing the rule or other preparations which should take place before a 
 rule is processed.
 
+> **Info Rule State** It is safe to store state in a rule using `this.xxx = yyy` from when `init()` is called
+> and throughout the analysis as each rule for each url will have its own context-object with the rule a prototype. 
 
 ##### dataTemplate()
 

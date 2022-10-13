@@ -19,9 +19,9 @@ config.debug = true;
 
 async function demo() {
 
-    //let rules = await ruleUtil.getRules(path.join(destDir, 'rules'));
+    //let rules = await ruleUtil.loadRules(path.join(destDir, 'rules'));
 
-    //let rules = await ruleUtil.getRules(path.join(__dirname, '../rules'));
+    //let rules = await ruleUtil.loadRules(path.join(__dirname, '../rules'));
     let rules = [{
         extractor: {
             extract: () => {
