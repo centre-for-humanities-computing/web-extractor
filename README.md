@@ -273,7 +273,7 @@ extractor: {
 
 ##### extractor.extract([template], [url], [options])
 
-- `template` - a clone of the template object returned by `dataTemplate()` or `null` if `dataTemplate()` is not defined
+- `template` - a clone of the template object returned by `dataTemplate()` or `undefined` if `dataTemplate()` is not defined
 - `url` - the url or url object currently being processed
 - `options` the options returned from [extractorOptions](#extractoroptions)
 
@@ -301,7 +301,7 @@ extractor: {
 ##### extractor.extractPuppeteer(page, [template], [url], [options]) \<async>
 
 - `page` - a puppeteer [`page`](https://github.com/puppeteer/puppeteer/blob/master/docs/api.md#class-page) instance. 
-- `template` - a clone of the template object returned by `dataTemplate()` or `null` if `dataTemplate()` is not defined
+- `template` - a clone of the template object returned by `dataTemplate()` or `undefined` if `dataTemplate()` is not defined
 - `url` - the url or url object currently being processed
 - `options` the options returned from [extractorOptions](#extractoroptions)
 

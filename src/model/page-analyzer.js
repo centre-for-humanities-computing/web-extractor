@@ -156,7 +156,7 @@ class PageAnalyzer {
                 }
 
                 for (let rule of this._rules) {
-                    let dataTemplate = (rule.dataTemplate ? rule.dataTemplate() : null);
+                    let dataTemplate = (rule.dataTemplate ? rule.dataTemplate() : undefined);
                     if (dataTemplate) {
                         dataTemplate = _.cloneDeep(dataTemplate); //user can make changes to template, so make sure to make a new copy for every run
                     }
