@@ -11,8 +11,8 @@ let destDir = 'd:/temp/web-extractor-temp-test';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// let urlsPath = path.join(__dirname, 'urls-test.txt');
-let urlsPath = path.join(__dirname, 'failing-urls.txt');
+let urlsPath = path.join(__dirname, 'urls-test.txt');
+// let urlsPath = path.join(__dirname, 'failing-urls.txt');
 let maxConcurrency = 15;
 
 config.debug = true;
@@ -23,9 +23,21 @@ async function demo() {
 
     //let rules = await ruleUtil.loadRules(path.join(__dirname, '../rules'));
     let rules = [{
+        init(options) {
+          this.options = options;
+        },
+        extractorOptions() {
+            return this.options;
+        },
         extractor: {
-            extract: () => {
-                return true; // we accept all pages as a match
+            extract(template, url, options) {
+                if (options?.extractParagraphs) {
+                    return [...document.querySelectorAll('p')].map(elem => elem.textContent);
+                }
+                return false; // return true to accept all pages
+            },
+            afterExtract(data) {
+                //console.log(data)
             }
         }
     }];
@@ -41,7 +53,10 @@ async function demo() {
             screenshot: true
         },
         maxConcurrency: maxConcurrency,
-        pageTimeoutMs: 90000
+        pageTimeoutMs: 90000,
+        ruleInitOptions: {
+            extractParagraphs: true
+        }
     };
 
     options.output = false;

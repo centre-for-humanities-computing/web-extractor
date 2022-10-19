@@ -161,8 +161,10 @@ class PageAnalyzer {
                         dataTemplate = _.cloneDeep(dataTemplate); //user can make changes to template, so make sure to make a new copy for every run
                     }
 
-                    // rule-utils makes sure this is an array
                     let extractors = rule.extractor;
+                    if (!Array.isArray(extractors)) {
+                        extractors = [extractors];
+                    }
 
                     let data = null;
                     let firstExtractCall = true;
@@ -171,7 +173,7 @@ class PageAnalyzer {
                         let extractor = extractors[i];
                         if (extractor.beforeExtract) {
                             try {
-                                let beforeExtractResponse = await extractor.beforeExtract(page, this._userUrl);
+                                let beforeExtractResponse = await extractor.beforeExtract(page, this._userUrl, rule.extractorOptions?.());
                                 if (typeof beforeExtractResponse !== 'object') {
                                     beforeExtractResponse = {};
                                 }
@@ -211,7 +213,7 @@ class PageAnalyzer {
                             }
 
                             if (extractor.extractPuppeteer) {
-                                let extractPromise = extractor.extractPuppeteer(page, dataArg, this._userUrl);
+                                let extractPromise = extractor.extractPuppeteer(page, dataArg, this._userUrl, rule.extractorOptions?.());
                                 if (!(extractPromise instanceof Promise)) {
                                     throw new Error(`extractor.extractPuppeteer must be async or return a Promise`);
                                 }
@@ -220,7 +222,7 @@ class PageAnalyzer {
                             }
 
                             if (extractor.extract) {
-                                data = await page.evaluate(extractor.extract, dataArg, this._userUrl);
+                                data = await page.evaluate(extractor.extract, dataArg, this._userUrl, rule.extractorOptions?.());
                                 this._resetActionTimerAndThrowIfErrorCaught();
                             }
 
@@ -230,7 +232,7 @@ class PageAnalyzer {
 
                             // only if valid (see above)
                             if (extractor.afterExtract) {
-                                data = await extractor.afterExtract(data, this._userUrl);
+                                data = await extractor.afterExtract(data, this._userUrl, rule.extractorOptions?.());
                                 if (data === undefined) {
                                     result.afterExtractAbortSave = true;
                                     break;
@@ -261,6 +263,8 @@ class PageAnalyzer {
             }
         });
     }
+
+
 
     /**
      * Time elapsed since last activity in nanoseconds

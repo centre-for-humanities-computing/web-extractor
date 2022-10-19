@@ -165,12 +165,14 @@ export default {
     name: 'name of the rule', //required
 
     init: async function() {} // optional
-    dataTemplate: function() {} // optional
+    dataTemplate: function() {} // optional,
+    extractorOptions: function() {} // optional,
     
     extractor: {
-        beforeExtract: async function(page, url) {}, // optional 
-        extract: function(template, url) {} // optional
-        afterExtract: function(data, rul) {} // optional
+        beforeExtract: async function(page, url, options) {}, // optional 
+        extract: function(template, url, options) {}, // optional
+        extractPuppeteer: function(page, template, url, options) {}, // optional
+        afterExtract: function(data, url, options) {} // optional
      }
     
 };
@@ -196,7 +198,7 @@ Can be used for initializing the rule or other preparations which should take pl
 rule is processed.
 
 > **Info Rule State** It is safe to store state in a rule using `this.xxx = yyy` from when `init()` is called
-> and throughout the analysis as each rule for each url will have its own context-object with the rule a prototype. 
+> and throughout the analysis as each rule for each url will have its own context-object with the rule a prototype.
 
 ##### dataTemplate()
 
@@ -206,14 +208,19 @@ If the function is defined it must return a JSON compliant object which will be 
 extractor of the rule (see below). For each url the rule i tested against a new clone of the template
 object, so it is safe to modify the template object in the `extract` method.
 
+##### extractorOptions()
+
+Returns `*` - options to pass to each method in the defined extractor(s). The returned value must be JSON-serializable.
+
 ##### extractor \<object | array>
 
 The extractor object should have at least one of the following methods:
 
-##### extractor.beforeExtract(page, [url]) \<async>
+##### extractor.beforeExtract(page, [url], [options]) \<async>
 
 - `page` - an instance of a [puppeteer page](https://github.com/puppeteer/puppeteer/blob/v2.1.0/docs/api.md#class-page)
 - `url` - the url or url object currently being processed
+- `options` the options returned from [extractorOptions](#extractoroptions)
 
 Returns: `Promise<object | undefined>` - a control object for what to do when beforeExtract succeeds or `undefined` (default) if the normal order of execution should be followed
 
@@ -264,10 +271,11 @@ extractor: {
 }
 ```
 
-##### extractor.extract([template], [url])
+##### extractor.extract([template], [url], [options])
 
 - `template` - a clone of the template object returned by `dataTemplate()` or `null` if `dataTemplate()` is not defined
 - `url` - the url or url object currently being processed
+- `options` the options returned from [extractorOptions](#extractoroptions)
 
 Returns: the extraction result or one of: `null`, `undefined`, `[]` or `{}` if no result was found
 
@@ -290,11 +298,12 @@ extractor: {
 }
 ```
 
-##### extractor.extractPuppeteer(page, [template], [url]) \<async>
+##### extractor.extractPuppeteer(page, [template], [url], [options]) \<async>
 
 - `page` - a puppeteer [`page`](https://github.com/puppeteer/puppeteer/blob/master/docs/api.md#class-page) instance. 
 - `template` - a clone of the template object returned by `dataTemplate()` or `null` if `dataTemplate()` is not defined
 - `url` - the url or url object currently being processed
+- `options` the options returned from [extractorOptions](#extractoroptions)
 
 Returns `Promise<?>`: the extraction result or one of: `null`, `undefined`, `[]` or `{}` if no result was found
 
@@ -314,10 +323,11 @@ extractor: {
 }
 ```
 
-##### extractor.afterExtract(data, [url]) \<async>
+##### extractor.afterExtract(data, [url], [options]) \<async>
 
 - `data` - the extracted data from [extractor.extract](#extractorextracttemplate)
 - `url` - the url or url object currently being processed
+- `options` the options returned from [extractorOptions](#extractoroptions)
 
 Returns: `Promise<data | undefined>` return the processed version of the passed in data or `undefined` 
 if you will handle saving the data yourself 
