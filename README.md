@@ -8,7 +8,7 @@ succeeds the data described in the rule's extract method is exported.
 Web Extractor can be used as a CLI program or as a npm module. 
 
 ## CLI Installation
-- Install [node.js](https://nodejs.org/en/download/) version 12.9 or higher
+- Install [node.js](https://nodejs.org/en/download/) version 16.x or higher
 - Clone this repository
 - Navigate to the root of the repository and run
 ```
@@ -104,16 +104,16 @@ a string in JSON-format.
         printProgression: {boolean} default false
     }
     ```  
-##### execute([progressionListener]) <async>
+##### execute([progressionListener]) \<async>
 - `progressionListener` - a function which will be notified on progression during the extraction
 
 Returns: `Promise<undefined>` - resolves when extraction completes or fails if an unhandled error occurred
 
-###### errors <static>
+##### errors \<static>
 An object with the internal custom errors thrown by Web Extractor.  Can be used in rules which want to 
 be able to throw the same kinds of errors for e.g. consistency in the error-log.
 
-##### debug([enable]) <static>
+##### debug([enable]) \<static>
 - `enable` a boolean enabling or disabling debug information to the console. 
     
 ## Results
@@ -164,7 +164,7 @@ structure:
 export default {
     name: 'name of the rule', //required
 
-    init: async function() {} // optional
+    init: async function(options) {} // optional
     dataTemplate: function() {} // optional,
     extractorOptions: function() {} // optional,
     
@@ -184,11 +184,7 @@ The name of the rule or some other name identifying the extracted data. If only 
 ##### init(options) \<async>
 - `options` - an object with relevant config data for the extractor. (see [WebExtractor](#WebExtractor) constructor `options.ruleInitOptions`):
  
-  - ```
-    {
-        destDir: {string}
-    }
-    ```
+
 
 Returns: `Promise<undefined>`
 
@@ -197,8 +193,8 @@ If defined this method will be called before each new url extraction begins.
 Can be used for initializing the rule or other preparations which should take place before a 
 rule is processed.
 
-> **Info Rule State** It is safe to store state in a rule using `this.xxx = yyy` from when `init()` is called
-> and throughout the analysis as each rule for each url will have its own context-object with the rule a prototype.
+> **Info Rule State** It is safe to store state in a rule using `this.xxx = yyy` from when `init(options)` is called
+> and throughout the analysis as each rule for each url will have its own context-object with the rule as prototype.
 
 ##### dataTemplate()
 
