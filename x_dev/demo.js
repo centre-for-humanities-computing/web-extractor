@@ -2,6 +2,7 @@ import { WebExtractor } from '../src/model/web-extractor.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import * as urlUtil from '../src/util/url-util.js';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import * as ruleUtil from '../src/util/rule-util.js';
 import config from '../src/config.js';
 
@@ -49,6 +50,7 @@ async function demo() {
 
     let options = {
         userAgent: undefined, // if undefined a default will be used
+        waitUntil: 'load',
         output: {
             screenshot: true
         },
@@ -56,6 +58,9 @@ async function demo() {
         pageTimeoutMs: 90000,
         ruleInitOptions: {
             extractParagraphs: true
+        },
+        configurePuppeteer(puppeteer) {
+            //puppeteer.use(StealthPlugin())
         }
     };
 

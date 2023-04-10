@@ -8,7 +8,7 @@ import fs from 'fs/promises';
 import fsStandard from 'fs';
 import path from 'path';
 import * as errors from './error.js';
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-extra';
 import fkill from 'fkill';
 import awaitLockModule from 'await-lock';
 
@@ -26,6 +26,7 @@ const DEFAULT_OPTIONS = Object.freeze({
     pageTimeoutMs: 90000,
     headless: true,
     userAgent: DEFAULT_USER_AGENT,
+    waitUntil: 'load',
     output: {
         screenshot: true,
         logs: { // set to false if logs should be disabled
@@ -33,7 +34,8 @@ const DEFAULT_OPTIONS = Object.freeze({
         },
         data: true
     },
-    ruleInitOptions: {}
+    ruleInitOptions: {},
+    configurePuppeteer: undefined
 });
 
 const FILE_NAMES = Object.freeze({
@@ -75,12 +77,17 @@ class WebExtractor {
         this._pageTimeout = options.pageTimeoutMs;
         this._headless = options.headless;
         this._userAgent = options.userAgent;
+        this._waitUntil = options.waitUntil;
         this._queue = this._createQueue();
         this._eventEmitter = new EventEmitter();
         this._closeLock = new AwaitLock();
         this._browserInstanceLock = new AwaitLock();
         this._activePageAnalyzers = new Set();
         this._progression = { total: urls.length, completed: 0, failed: 0, pending: urls.length };
+
+        if (options.configurePuppeteer) {
+            options.configurePuppeteer(puppeteer);
+        }
     }
 
     addProgressionListener(listener) {
@@ -206,7 +213,7 @@ class WebExtractor {
             // make a new context for every page extraction making it is safe to store state using "this"  in the rule
             let rulesAnalysisContexts = ruleUtil.createRulesAnalysisContexts(this._rules);
             await ruleUtil.initRules(rulesAnalysisContexts, this._ruleInitOptions);
-            analyzer = new PageAnalyzer(userUrl, rulesAnalysisContexts, this._pageTimeout, this._userAgent);
+            analyzer = new PageAnalyzer(userUrl, rulesAnalysisContexts, this._pageTimeout, this._userAgent, this._waitUntil);
             this._activePageAnalyzers.add(analyzer);
 
             let id = uniqid();
@@ -291,6 +298,8 @@ class WebExtractor {
             this._activePageAnalyzers.delete(analyzer);
         }
     }
+
+    // TODO test og dokumenter at: waitUntil kan konfigures, at man kan tilføje plugins via configurePuppeteer (skriv at vi bruger "extra" med link), vis eks i README.md prøv med Stealh plugin (fjern igen efter test)
 
     _createQueue() {
         return new PQueue({ concurrency: this._maxConcurrency });

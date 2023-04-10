@@ -76,6 +76,32 @@ async function run() {
 run();
 ```
 
+WebExtractor uses [puppeteer-extra](https://www.npmjs.com/package/puppeteer-extra), so it is possible to add plugins using the `options.configurePuppeteer` function.
+```
+import { WebExtractor } from '@chcaa/web-extractor';
+import StealthPlugin = import('puppeteer-extra-plugin-stealth');
+
+async function run() {
+    let urls = ['https://www.dr.dk', 'tv2.dk'];
+
+    let rule = {...};
+    let destDir = '/temp/data/web-extractor';
+    
+    let options = {
+        configurePuppeteer(puppeteer) {
+            puppeteer.use(StealthPlugin());
+        }
+    }
+
+    let extractor = new WebExtractor(urls, rule, destDir, options);
+
+    await extractor.execute();
+}
+
+run();
+```
+
+
 ### WebExtractor
 The following methods and properties are available:
 
@@ -95,13 +121,16 @@ a string in JSON-format.
         maxConcurrency: {integer} default 15,
         pageTimeoutMs: {integer} default 90000,
         headless: {boolean} default true,
+        userAgent: {string} default 
+        waitUntil: {string} default 'load' // one of [load|domcontentloaded|networkidle0|networkidle2]
         output: {
             screenshot: {boolean} default true,
             logs: {boolean} default true,
             data: {boolean} default true
         },
         ruleInitOptions: {}, // options which should be passed to rules init() method
-        printProgression: {boolean} default false
+        printProgression: {boolean} default false,
+        configurePuppeteer: {function(puppeteer)} default undefined // a function to further configure puppeteer
     }
     ```  
 ##### execute([progressionListener]) \<async>

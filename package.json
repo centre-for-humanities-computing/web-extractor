@@ -26,8 +26,12 @@
     "line-reader": "^0.4.0",
     "lodash": "^4.17.21",
     "p-queue": "^7.3.0",
-    "puppeteer": "^18.0.5",
+    "puppeteer": "^18.2.1",
+    "puppeteer-extra": "^3.3.6",
     "single-line-log": "^1.1.2",
     "uniqid": "^5.4.0"
+  },
+  "devDependencies": {
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
   }
 }
