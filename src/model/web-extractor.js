@@ -8,11 +8,9 @@ import fs from 'fs/promises';
 import fsStandard from 'fs';
 import path from 'path';
 import * as errors from './error.js';
-// import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer';
 import fkill from 'fkill';
 import awaitLockModule from 'await-lock';
-import puppeteer from 'puppeteer-extra'
-import StealthPlugin from 'puppeteer-extra-plugin-stealth'
 
 const AwaitLock = awaitLockModule.default;
 import { FileHandleWriteLock } from '../util/file-handle-write-lock.js';
@@ -342,8 +340,6 @@ class WebExtractor {
             }
 
             if (!this._browser) {
-                puppeteer.use(StealthPlugin())
-
                 this._browser = await puppeteer.launch({
                     headless: this._headless,
                     ignoreHTTPSErrors: true,

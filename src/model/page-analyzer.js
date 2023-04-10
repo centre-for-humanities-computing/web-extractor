@@ -12,7 +12,7 @@ const requestStrategies = [
     { // default request
         name: 'primary', //if no protocol use http, wait for document load event
         fetch: async function (page, url) {
-            return await page.goto(getUrl(url, 'http'), { waitUntil: ['networkidle0'] });
+            return await page.goto(getUrl(url, 'http'), { waitUntil: ['load'] });
         },
         canSolveError: function (error, url) {
             return false;
@@ -21,7 +21,7 @@ const requestStrategies = [
     { // default request
         name: 'www-alias',
         fetch: async function (page, url) {
-            return await page.goto(getUrl('www.' + url, 'http'), { waitUntil: ['networkidle0'] });
+            return await page.goto(getUrl('www.' + url, 'http'), { waitUntil: ['load'] });
         },
         canSolveError: function (error, url) {
             if (!urlHasProtocol(url) && !urlStartsWithWww(url)) {
