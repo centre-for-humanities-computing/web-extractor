@@ -60,7 +60,7 @@ async function demo() {
             extractParagraphs: true
         },
         configurePuppeteer(puppeteer) {
-            //puppeteer.use(StealthPlugin())
+            puppeteer.use(StealthPlugin())
         }
     };
 

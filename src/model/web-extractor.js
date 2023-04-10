@@ -8,7 +8,8 @@ import fs from 'fs/promises';
 import fsStandard from 'fs';
 import path from 'path';
 import * as errors from './error.js';
-import puppeteer from 'puppeteer-extra';
+import puppeteer from 'puppeteer';
+import { addExtra as puppeteerWrapExtra } from "puppeteer-extra";
 import fkill from 'fkill';
 import awaitLockModule from 'await-lock';
 
@@ -85,8 +86,10 @@ class WebExtractor {
         this._activePageAnalyzers = new Set();
         this._progression = { total: urls.length, completed: 0, failed: 0, pending: urls.length };
 
+        this._puppeteer = puppeteerWrapExtra(puppeteer);
+
         if (options.configurePuppeteer) {
-            options.configurePuppeteer(puppeteer);
+            options.configurePuppeteer(this._puppeteer);
         }
     }
 
@@ -299,8 +302,6 @@ class WebExtractor {
         }
     }
 
-    // TODO test og dokumenter at: waitUntil kan konfigures, at man kan tilføje plugins via configurePuppeteer (skriv at vi bruger "extra" med link), vis eks i README.md prøv med Stealh plugin (fjern igen efter test)
-
     _createQueue() {
         return new PQueue({ concurrency: this._maxConcurrency });
     }
@@ -349,7 +350,7 @@ class WebExtractor {
             }
 
             if (!this._browser) {
-                this._browser = await puppeteer.launch({
+                this._browser = await this._puppeteer.launch({
                     headless: this._headless,
                     ignoreHTTPSErrors: true,
                     defaultViewport: { width: 1024, height: 1024 }
