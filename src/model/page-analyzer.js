@@ -78,7 +78,7 @@ class PageAnalyzer {
         this._screenshotCounter = 1;
         this._errorCaught = false;
         this._extractPromiseReject = null;
-        this._requestStrategies = createRequestStrategies(waitUntil);
+        this._requestStrategies = createRequestStrategies(this._waitUntil);
     }
 
     /**
@@ -142,7 +142,7 @@ class PageAnalyzer {
                         result.requestStrategy = strategy.name;
                         break;
                     } catch (e) {
-                        let nextIndex = nextRequestStrategyIndexForError(i, e, this._url);
+                        let nextIndex = this._nextRequestStrategyIndexForError(i, e, this._url);
                         if (nextIndex < 0) {
                             throw e;
                         } else {
@@ -268,7 +268,15 @@ class PageAnalyzer {
         });
     }
 
-
+    _nextRequestStrategyIndexForError(currentIndex, error, url) {
+        for (let i = currentIndex + 1; i < this._requestStrategies.length; i++) {
+            let strategy = this._requestStrategies[i];
+            if (strategy.canSolveError(error, url)) {
+                return i;
+            }
+        }
+        return -1;
+    }
 
     /**
      * Time elapsed since last activity in nanoseconds
@@ -380,16 +388,6 @@ function errorMessageIncludes(error, messageSnippets) {
         }
     }
     return false;
-}
-
-function nextRequestStrategyIndexForError(currentIndex, error, url) {
-    for (let i = currentIndex + 1; i < this._requestStrategies.length; i++) {
-        let strategy = this._requestStrategies[i];
-        if (strategy.canSolveError(error, url)) {
-            return i;
-        }
-    }
-    return -1;
 }
 
 export { PageAnalyzer };

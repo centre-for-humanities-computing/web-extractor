@@ -218,6 +218,8 @@ class WebExtractor {
             await ruleUtil.initRules(rulesAnalysisContexts, this._ruleInitOptions);
             analyzer = new PageAnalyzer(userUrl, rulesAnalysisContexts, this._pageTimeout, this._userAgent, this._waitUntil);
             this._activePageAnalyzers.add(analyzer);
+            // prevent race condition where it timeElapsedSinceLastActivityNs() is called by cleanUp timer before the call to extractData() because of the async call to _browserInstance() below
+            analyzer._resetActionTimer();
 
             let id = uniqid();
 
